@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Availability Checker</title>
+    <meta name="description" content="Check domain availability across multiple TLDs quickly and privately">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app" class="app-container">
+        <header class="header">
+            <h1 class="title">Domain Availability Checker</h1>
+            <p class="subtitle">Find available domain names across multiple extensions</p>
+        </header>
+
+        <main class="main-content">
+            <section class="search-section">
+                <form id="domain-form" class="domain-form">
+                    <div class="input-group">
+                        <label for="domain-input" class="input-label">Enter domain name:</label>
+                        <input 
+                            type="text" 
+                            id="domain-input" 
+                            class="domain-input" 
+                            placeholder="e.g., myawesomesite"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <button type="submit" id="check-button" class="check-button">
+                            Check Availability
+                        </button>
+                    </div>
+                    <div id="validation-error" class="validation-error hidden"></div>
+                </form>
+            </section>
+
+            <section id="results-section" class="results-section hidden">
+                <h2 class="results-title">Domain Availability Results</h2>
+                <div id="progress-indicator" class="progress-indicator hidden">
+                    <div class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                    <span id="progress-text" class="progress-text">Checking domains...</span>
+                </div>
+                <div id="results-grid" class="results-grid"></div>
+                <div id="error-message" class="error-message hidden"></div>
+                <button id="retry-button" class="retry-button hidden">Retry Failed Checks</button>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p class="footer-text">
+                Privacy-focused • No data stored • Real-time checking
+            </p>
+        </footer>
+    </div>
+
+    <!-- Application will be loaded here -->
+    <script src="../dist/index.js"></script>
+</body>
+</html>
