@@ -54,7 +54,7 @@ body {
 
 .input-group {
     display: flex;
-    align-items: center;
+    align-items: end;
     gap: 1rem;
     flex-wrap: wrap;
 }
@@ -71,6 +71,7 @@ body {
     color: #2c3e50;
     white-space: nowrap;
     min-width: fit-content;
+    margin-bottom: 0.75rem;
 }
 
 .domain-input {
@@ -251,33 +252,34 @@ body {
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     letter-spacing: 0.5px;
     border: 2px solid transparent;
-    color: white !important;
+    color: white;
+    display: inline-block;
 }
 
 .status.available {
     background-color: #27ae60;
-    color: white !important;
+    color: white;
     border-color: #1e8449;
     box-shadow: 0 2px 4px rgba(39, 174, 96, 0.3);
 }
 
 .status.taken {
     background-color: #e74c3c;
-    color: white !important;
+    color: white;
     border-color: #c0392b;
     box-shadow: 0 2px 4px rgba(231, 76, 60, 0.3);
 }
 
 .status.error {
     background-color: #f39c12;
-    color: white !important;
+    color: white;
     border-color: #d68910;
     box-shadow: 0 2px 4px rgba(243, 156, 18, 0.3);
 }
 
 .status.checking {
     background-color: #3498db;
-    color: white !important;
+    color: white;
     border-color: #2980b9;
     box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
 }
@@ -469,6 +471,7 @@ body {
     .input-group .input-label {
         flex-basis: 150px;
         flex-shrink: 0;
+        margin-bottom: 0.75rem;
     }
     
     .input-group .domain-input {
