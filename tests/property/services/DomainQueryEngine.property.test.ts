@@ -83,8 +83,8 @@ describe('DomainQueryEngine Property Tests', () => {
           
           const domains = engine.constructDomains(baseDomain);
           
-          // Should always create exactly 7 domains
-          expect(domains).toHaveLength(7);
+          // Should always create exactly 19 domains
+          expect(domains).toHaveLength(19);
           
           // Each domain should contain the base domain
           domains.forEach(domain => {
@@ -108,8 +108,8 @@ describe('DomainQueryEngine Property Tests', () => {
           
           const results = engine.initializeDomainResults(baseDomain);
           
-          // Should create exactly 7 results
-          expect(results).toHaveLength(7);
+          // Should create exactly 19 results
+          expect(results).toHaveLength(19);
           
           // All results should have consistent structure
           results.forEach(result => {
@@ -261,7 +261,7 @@ describe('DomainQueryEngine Property Tests', () => {
           const summary = engine.getResultsSummary();
           
           // Summary should be mathematically consistent
-          expect(summary.total).toBe(7); // Always 7 TLDs
+          expect(summary.total).toBe(19); // Always 19 TLDs
           expect(summary.completed).toBe(summary.available + summary.taken + summary.errors);
           expect(summary.total).toBe(summary.completed + summary.checking);
           
@@ -336,7 +336,7 @@ describe('DomainQueryEngine Property Tests', () => {
           engine.reset(); // Ensure clean state for each test
           // Initialize
           engine.initializeDomainResults(baseDomain);
-          expect(engine.getAllResults()).toHaveLength(7);
+          expect(engine.getAllResults()).toHaveLength(19);
           expect(engine.isComplete()).toBe(false); // All should be CHECKING initially
           
           // Update some results
@@ -347,8 +347,8 @@ describe('DomainQueryEngine Property Tests', () => {
               status: AvailabilityStatus.AVAILABLE
             });
           
-            // State should be consistent
-            expect(engine.getAllResults()).toHaveLength(7);
+            // State should be consistent - updated to match current TLD count (19)
+            expect(engine.getAllResults()).toHaveLength(19);
             expect(engine.getResult(domains[0])?.status).toBe(AvailabilityStatus.AVAILABLE);
           
             // Reset should clear everything

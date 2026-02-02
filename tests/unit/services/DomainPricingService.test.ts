@@ -48,7 +48,7 @@ describe('DomainPricingService', () => {
     it('should return all supported TLD pricing', () => {
       const allPricing = pricingService.getAllTLDPricing();
       
-      expect(allPricing).toHaveLength(7); // .com, .net, .org, .ai, .dev, .io, .co
+      expect(allPricing).toHaveLength(19); // All 19 TLDs
       expect(allPricing.find(p => p.tld === '.com')).toBeDefined();
       expect(allPricing.find(p => p.tld === '.ai')).toBeDefined();
     });

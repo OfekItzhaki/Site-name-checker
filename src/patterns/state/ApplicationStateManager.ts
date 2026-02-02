@@ -349,6 +349,27 @@ export class ApplicationStateManager implements IApplicationStateManager {
   }
 
   /**
+   * Get uptime since manager creation
+   */
+  getUptime(): number {
+    const firstTransition = this.stateHistory[0];
+    const uptime = firstTransition 
+      ? Date.now() - firstTransition.timestamp.getTime()
+      : Math.max(1, Date.now() - this.context.lastActionAt.getTime());
+    return uptime;
+  }
+
+  /**
+   * Get last transition time
+   */
+  getLastTransitionTime(): Date | null {
+    if (this.stateHistory.length === 0) {
+      return null;
+    }
+    return this.stateHistory[this.stateHistory.length - 1].timestamp;
+  }
+
+  /**
    * Get current state statistics
    * @returns State statistics
    */

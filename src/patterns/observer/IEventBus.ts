@@ -25,6 +25,20 @@ export interface IEventBus {
   publish<T>(event: string, data: T): void;
 
   /**
+   * Emit an event (alias for publish)
+   * @param event - Event name to emit
+   * @param data - Data to send with the event
+   */
+  emit<T>(event: string, data: T): void;
+
+  /**
+   * Listen to an event (alias for subscribe)
+   * @param event - Event name to listen to
+   * @param handler - Function to handle the event data
+   */
+  on<T>(event: string, handler: (data: T) => void): void;
+
+  /**
    * Clear all event subscriptions
    */
   clear(): void;

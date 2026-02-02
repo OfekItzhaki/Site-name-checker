@@ -69,8 +69,12 @@ describe('DomainQueryEngine', () => {
     test('should return all supported TLDs', () => {
       const tlds = engine.getSupportedTLDs();
       
-      expect(tlds).toEqual(['.com', '.net', '.org', '.ai', '.dev', '.io', '.co']);
-      expect(tlds).toHaveLength(7);
+      expect(tlds).toEqual([
+        '.com', '.net', '.org', '.ai', '.dev', '.io', '.co',
+        '.app', '.tech', '.online', '.store', '.shop', '.site',
+        '.blog', '.news', '.info', '.biz', '.me', '.tv'
+      ]);
+      expect(tlds).toHaveLength(19);
     });
 
     test('should return a copy of TLDs array', () => {
@@ -86,9 +90,10 @@ describe('DomainQueryEngine', () => {
       expect(engine.isSupportedDomain('test.net')).toBe(true);
       expect(engine.isSupportedDomain('site.ai')).toBe(true);
       expect(engine.isSupportedDomain('app.dev')).toBe(true);
+      expect(engine.isSupportedDomain('test.info')).toBe(true);
       
       expect(engine.isSupportedDomain('example.xyz')).toBe(false);
-      expect(engine.isSupportedDomain('test.info')).toBe(false);
+      expect(engine.isSupportedDomain('test.unknown')).toBe(false);
       expect(engine.isSupportedDomain('invalid')).toBe(false);
     });
 
@@ -104,13 +109,9 @@ describe('DomainQueryEngine', () => {
       const domains = engine.constructDomains('example');
       
       expect(domains).toEqual([
-        'example.com',
-        'example.net',
-        'example.org',
-        'example.ai',
-        'example.dev',
-        'example.io',
-        'example.co'
+        'example.com', 'example.net', 'example.org', 'example.ai', 'example.dev', 'example.io', 'example.co',
+        'example.app', 'example.tech', 'example.online', 'example.store', 'example.shop', 'example.site',
+        'example.blog', 'example.news', 'example.info', 'example.biz', 'example.me', 'example.tv'
       ]);
     });
 
@@ -118,13 +119,9 @@ describe('DomainQueryEngine', () => {
       const domains = engine.constructDomains('EXAMPLE');
       
       expect(domains).toEqual([
-        'example.com',
-        'example.net',
-        'example.org',
-        'example.ai',
-        'example.dev',
-        'example.io',
-        'example.co'
+        'example.com', 'example.net', 'example.org', 'example.ai', 'example.dev', 'example.io', 'example.co',
+        'example.app', 'example.tech', 'example.online', 'example.store', 'example.shop', 'example.site',
+        'example.blog', 'example.news', 'example.info', 'example.biz', 'example.me', 'example.tv'
       ]);
     });
 
@@ -132,7 +129,7 @@ describe('DomainQueryEngine', () => {
       const domains = engine.constructDomains('  example  ');
       
       expect(domains[0]).toBe('example.com');
-      expect(domains).toHaveLength(7);
+      expect(domains).toHaveLength(19);
     });
 
     test('should throw error for empty base domain', () => {
@@ -162,7 +159,7 @@ describe('DomainQueryEngine', () => {
 
     test('should return null for unsupported domains', () => {
       expect(engine.extractBaseDomain('example.xyz')).toBeNull();
-      expect(engine.extractBaseDomain('test.info')).toBeNull();
+      expect(engine.extractBaseDomain('test.unknown')).toBeNull();
       expect(engine.extractBaseDomain('invalid')).toBeNull();
     });
 
@@ -176,7 +173,7 @@ describe('DomainQueryEngine', () => {
     test('should initialize results for all TLDs', () => {
       const results = engine.initializeDomainResults('example');
       
-      expect(results).toHaveLength(7);
+      expect(results).toHaveLength(19);
       
       results.forEach((result) => {
         expect(result.baseDomain).toBe('example');
@@ -190,7 +187,11 @@ describe('DomainQueryEngine', () => {
 
     test('should set correct TLD for each result', () => {
       const results = engine.initializeDomainResults('test');
-      const expectedTLDs = ['.com', '.net', '.org', '.ai', '.dev', '.io', '.co'];
+      const expectedTLDs = [
+        '.com', '.net', '.org', '.ai', '.dev', '.io', '.co',
+        '.app', '.tech', '.online', '.store', '.shop', '.site',
+        '.blog', '.news', '.info', '.biz', '.me', '.tv'
+      ];
       
       results.forEach((result, index) => {
         expect(result.tld).toBe(expectedTLDs[index]);
@@ -203,7 +204,7 @@ describe('DomainQueryEngine', () => {
       
       expect(engine.getResult('example.com')).toBeDefined();
       expect(engine.getResult('example.net')).toBeDefined();
-      expect(engine.getAllResults()).toHaveLength(7);
+      expect(engine.getAllResults()).toHaveLength(19);
     });
   });
 
@@ -297,7 +298,7 @@ describe('DomainQueryEngine', () => {
     test('should get all results', () => {
       const results = engine.getAllResults();
       
-      expect(results).toHaveLength(7);
+      expect(results).toHaveLength(19);
       expect(results.every(r => r.baseDomain === 'example')).toBe(true);
     });
 
@@ -319,7 +320,7 @@ describe('DomainQueryEngine', () => {
 
       expect(availableResults).toHaveLength(1);
       expect(takenResults).toHaveLength(1);
-      expect(checkingResults).toHaveLength(5);
+      expect(checkingResults).toHaveLength(17);
     });
   });
 
@@ -347,11 +348,11 @@ describe('DomainQueryEngine', () => {
     test('should provide accurate results summary', () => {
       const summary = engine.getResultsSummary();
       
-      expect(summary.total).toBe(7);
+      expect(summary.total).toBe(19);
       expect(summary.available).toBe(1);
       expect(summary.taken).toBe(1);
       expect(summary.errors).toBe(1);
-      expect(summary.checking).toBe(4);
+      expect(summary.checking).toBe(16);
       expect(summary.completed).toBe(3); // available + taken + errors
     });
 
@@ -457,7 +458,7 @@ describe('DomainQueryEngine', () => {
   describe('Reset Functionality', () => {
     test('should clear all results on reset', () => {
       engine.initializeDomainResults('example');
-      expect(engine.getAllResults()).toHaveLength(7);
+      expect(engine.getAllResults()).toHaveLength(19);
       
       engine.reset();
       expect(engine.getAllResults()).toHaveLength(0);
@@ -469,7 +470,7 @@ describe('DomainQueryEngine', () => {
       engine.reset();
       
       const newResults = engine.initializeDomainResults('test');
-      expect(newResults).toHaveLength(7);
+      expect(newResults).toHaveLength(19);
       expect(newResults[0]?.baseDomain).toBe('test');
     });
   });

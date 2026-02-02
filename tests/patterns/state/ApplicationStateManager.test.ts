@@ -368,18 +368,22 @@ describe('ApplicationStateManager', () => {
     });
 
     it('should provide statistics', async () => {
+      jest.useFakeTimers();
+      
       stateManager.handleInput('example');
       await stateManager.transitionTo(ApplicationStateType.VALIDATING);
       stateManager.handleError('Test error');
 
-      // Add small delay to ensure uptime > 0
-      await new Promise(resolve => setTimeout(resolve, 1));
+      // Advance time to ensure uptime > 0
+      jest.advanceTimersByTime(100);
 
       const stats = stateManager.getStatistics();
       expect(stats.currentState).toBe(ApplicationStateType.VALIDATING);
       expect(stats.totalTransitions).toBe(1);
       expect(stats.errorsCount).toBe(1);
       expect(stats.uptime).toBeGreaterThan(0);
+      
+      jest.useRealTimers();
     });
   });
 });

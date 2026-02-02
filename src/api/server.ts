@@ -1,32 +1,30 @@
 import http from 'http';
 import url from 'url';
-import { DomainController } from '../controllers/DomainController';
-import { DomainPricingService } from '../services/DomainPricingService';
-import type { IQueryRequest } from '../models';
+import { DomainApplicationService } from '../application/DomainApplicationService';
+import { CheckDomainAvailabilityCommand } from '../application/commands/CheckDomainAvailabilityCommand';
+import { ValidateDomainCommand } from '../application/commands/ValidateDomainCommand';
+import { GetDomainPricingQuery } from '../application/queries/GetDomainPricingQuery';
+import type { IQueryResponse } from '../models';
 
 /**
- * API Server for Domain Availability Checker
- * Provides REST endpoints for domain checking functionality
+ * Lightweight API Server - delegates all business logic to application layer
+ * Handles only HTTP concerns: routing, parsing, serialization
  */
 export class ApiServer {
   private server: http.Server;
-  private domainController: DomainController;
-  private pricingService: DomainPricingService;
+  private applicationService: DomainApplicationService;
   private port: number;
 
   constructor(port: number = 3001) {
     this.port = port;
-    this.domainController = new DomainController();
-    this.pricingService = new DomainPricingService();
+    this.applicationService = new DomainApplicationService();
     this.server = this.createServer();
   }
 
   private createServer(): http.Server {
     return http.createServer((req, res) => {
-      // Enable CORS for browser requests
       this.setCorsHeaders(res);
 
-      // Handle preflight requests
       if (req.method === 'OPTIONS') {
         res.writeHead(200);
         res.end();
@@ -52,19 +50,22 @@ export class ApiServer {
 
       console.log(`${new Date().toISOString()} - ${method} ${pathname}`);
 
-      // Route handling
-      if (pathname === '/api/health' && method === 'GET') {
-        await this.handleHealthCheck(req, res);
-      } else if (pathname === '/api/check-domain' && method === 'POST') {
-        await this.handleDomainCheck(req, res);
-      } else if (pathname === '/api/validate-domain' && method === 'POST') {
-        await this.handleDomainValidation(req, res);
-      } else if (pathname === '/api/pricing' && method === 'GET') {
-        await this.handlePricingInfo(req, res);
-      } else if (pathname === '/api/domain-pricing' && method === 'POST') {
-        await this.handleDomainPricing(req, res);
-      } else {
-        this.sendError(res, 404, 'Endpoint not found');
+      // Route to appropriate handler
+      switch (`${method} ${pathname}`) {
+        case 'GET /api/health':
+          await this.handleHealthCheck(res);
+          break;
+        case 'POST /api/check-domain':
+          await this.handleDomainCheck(req, res);
+          break;
+        case 'POST /api/validate-domain':
+          await this.handleDomainValidation(req, res);
+          break;
+        case 'POST /api/domain-pricing':
+          await this.handleDomainPricing(req, res);
+          break;
+        default:
+          this.sendError(res, 404, 'Endpoint not found');
       }
     } catch (error) {
       console.error('Server error:', error);
@@ -72,7 +73,7 @@ export class ApiServer {
     }
   }
 
-  private async handleHealthCheck(_req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  private async handleHealthCheck(res: http.ServerResponse): Promise<void> {
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -86,18 +87,24 @@ export class ApiServer {
   private async handleDomainCheck(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     try {
       const body = await this.parseRequestBody(req);
-      const request: IQueryRequest = JSON.parse(body);
+      const request = this.parseJson(body);
 
-      // Validate request
       if (!request.baseDomain || typeof request.baseDomain !== 'string') {
         this.sendError(res, 400, 'Invalid request: baseDomain is required');
         return;
       }
 
-      // Process domain check using existing controller
-      const response = await this.domainController.checkDomainAvailability(request);
-      
-      this.sendJson(res, 200, response);
+      // Delegate to application layer via CQRS
+      const command = new CheckDomainAvailabilityCommand(
+        request.baseDomain,
+        request.tlds || ['.com', '.net', '.org']
+      );
+
+      const result = await this.applicationService.getMediator().send(command) as IQueryResponse;
+      this.sendJson(res, 200, { 
+        ...result, 
+        baseDomain: request.baseDomain 
+      });
     } catch (error) {
       console.error('Domain check error:', error);
       this.sendError(res, 500, 'Failed to check domain availability');
@@ -107,15 +114,16 @@ export class ApiServer {
   private async handleDomainValidation(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     try {
       const body = await this.parseRequestBody(req);
-      const { domain } = JSON.parse(body);
+      const { domain } = this.parseJson(body);
 
       if (!domain || typeof domain !== 'string') {
         this.sendError(res, 400, 'Invalid request: domain is required');
         return;
       }
 
-      // Use existing validation logic
-      const isValid = this.domainController.validateDomainInput(domain);
+      // Delegate to application layer via CQRS
+      const command = new ValidateDomainCommand(domain);
+      const isValid = await this.applicationService.getMediator().send(command);
       
       this.sendJson(res, 200, { 
         domain, 
@@ -131,14 +139,16 @@ export class ApiServer {
   private async handleDomainPricing(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     try {
       const body = await this.parseRequestBody(req);
-      const { domain } = JSON.parse(body);
+      const { domain } = this.parseJson(body);
 
       if (!domain || typeof domain !== 'string') {
         this.sendError(res, 400, 'Invalid request: domain is required');
         return;
       }
 
-      const pricing = this.pricingService.getDomainPricing(domain);
+      // Delegate to application layer via CQRS
+      const query = new GetDomainPricingQuery(domain);
+      const pricing = await this.applicationService.getMediator().send(query);
       
       if (!pricing) {
         this.sendError(res, 404, 'Pricing information not available for this domain');
@@ -152,32 +162,22 @@ export class ApiServer {
     }
   }
 
-  private async handlePricingInfo(_req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-    try {
-      const allPricing = this.pricingService.getAllTLDPricing();
-      
-      this.sendJson(res, 200, {
-        supportedTLDs: allPricing,
-        lastUpdated: new Date().toISOString(),
-        disclaimer: 'Prices are estimates based on typical market rates and may vary by registrar and promotions.'
-      });
-    } catch (error) {
-      console.error('Pricing info error:', error);
-      this.sendError(res, 500, 'Failed to get pricing information');
-    }
-  }
-
+  // HTTP utility methods
   private parseRequestBody(req: http.IncomingMessage): Promise<string> {
     return new Promise((resolve, reject) => {
       let body = '';
-      req.on('data', chunk => {
-        body += chunk.toString();
-      });
-      req.on('end', () => {
-        resolve(body);
-      });
+      req.on('data', chunk => body += chunk.toString());
+      req.on('end', () => resolve(body));
       req.on('error', reject);
     });
+  }
+
+  private parseJson(body: string): any {
+    try {
+      return JSON.parse(body);
+    } catch {
+      throw new Error('Invalid JSON format');
+    }
   }
 
   private sendJson(res: http.ServerResponse, statusCode: number, data: any): void {
@@ -202,7 +202,6 @@ export class ApiServer {
         console.log(`   GET  /api/health - Health check`);
         console.log(`   POST /api/check-domain - Check domain availability`);
         console.log(`   POST /api/validate-domain - Validate domain format`);
-        console.log(`   GET  /api/pricing - Get all TLD pricing information`);
         console.log(`   POST /api/domain-pricing - Get pricing for specific domain`);
         resolve();
       });

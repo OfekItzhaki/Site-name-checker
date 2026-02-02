@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Domain Availability Checker</title>
     <meta name="description" content="Check domain availability across multiple TLDs quickly and privately">
+    
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon.svg">
+    <link rel="manifest" href="site.webmanifest">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Domain Checker">
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -16,7 +28,7 @@
 
         <main class="main-content">
             <section class="search-section">
-                <form id="domain-form" class="domain-form">
+                <form id="domain-form" class="domain-form" role="search" aria-label="Domain availability search">
                     <div class="input-group">
                         <label for="domain-input" class="input-label">Enter domain name:</label>
                         <input 
@@ -26,16 +38,78 @@
                             placeholder="e.g., myawesomesite"
                             autocomplete="off"
                             spellcheck="false"
+                            aria-describedby="validation-error"
+                            aria-invalid="false"
                         >
-                        <button type="submit" id="check-button" class="check-button">
+                        <button type="submit" id="check-button" class="check-button" aria-label="Check domain availability">
                             Check Availability
                         </button>
+                        <button type="button" id="bulk-check-button" class="bulk-check-button" aria-label="Check multiple domains">
+                            Bulk Check
+                        </button>
                     </div>
-                    <div id="validation-error" class="validation-error hidden"></div>
+                    <div id="bulk-input-area" class="bulk-input-area hidden">
+                        <label for="bulk-domains" class="input-label">Enter multiple domains (one per line):</label>
+                        <textarea id="bulk-domains" class="bulk-domains-input" placeholder="example1&#10;example2&#10;example3" rows="5"></textarea>
+                        <div class="bulk-actions">
+                            <button type="button" id="process-bulk" class="process-bulk-btn">Check All Domains</button>
+                            <button type="button" id="cancel-bulk" class="cancel-bulk-btn">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="validation-error" class="validation-error hidden" role="alert" aria-live="polite"></div>
                 </form>
+                
+                <!-- Advanced Filters -->
+                <div id="advanced-filters" class="advanced-filters hidden">
+                    <h3>Filter Results</h3>
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <input type="checkbox" id="filter-available" checked> Available only
+                        </label>
+                        <label class="filter-label">
+                            <input type="checkbox" id="filter-premium"> Premium TLDs only
+                        </label>
+                        <label class="filter-label">
+                            Price range: <select id="price-filter">
+                                <option value="all">All prices</option>
+                                <option value="under-10">Under $10</option>
+                                <option value="10-50">$10 - $50</option>
+                                <option value="over-50">Over $50</option>
+                            </select>
+                        </label>
+                    </div>
+                    <button id="toggle-filters" class="toggle-filters-btn">Hide Filters</button>
+                </div>
+                
+                <!-- Search History -->
+                <div id="search-history" class="search-history hidden"></div>
+                
+                <!-- Analytics Panel -->
+                <div id="analytics-panel" class="analytics-panel hidden">
+                    <h3>📊 Performance Analytics</h3>
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <span class="metric-value" id="total-searches">0</span>
+                            <div class="metric-label">Total Searches</div>
+                        </div>
+                        <div class="analytics-card">
+                            <span class="metric-value" id="avg-search-time">0ms</span>
+                            <div class="metric-label">Avg Search Time</div>
+                        </div>
+                        <div class="analytics-card">
+                            <span class="metric-value" id="success-rate">100%</span>
+                            <div class="metric-label">Success Rate</div>
+                        </div>
+                    </div>
+                    <div class="popular-tlds">
+                        <h4>Popular TLDs</h4>
+                        <div class="tld-list" id="popular-tlds-list"></div>
+                    </div>
+                    <button id="toggle-analytics" class="toggle-filters-btn">Hide Analytics</button>
+                </div>
             </section>
 
-            <section id="results-section" class="results-section hidden">
+            <section id="results-section" class="results-section hidden" aria-live="polite">
                 <h2 class="results-title">Domain Availability Results</h2>
                 <div id="progress-indicator" class="progress-indicator hidden">
                     <div class="progress-bar">
@@ -50,6 +124,11 @@
         </main>
 
         <footer class="footer">
+            <div class="footer-actions">
+                <button id="show-filters" class="footer-btn">🔍 Show Filters</button>
+                <button id="show-analytics" class="footer-btn">📊 Show Analytics</button>
+                <button id="export-data" class="footer-btn">📥 Export Data</button>
+            </div>
             <p class="footer-text">
                 Privacy-focused • No data stored • Real-time checking
             </p>
@@ -57,6 +136,9 @@
     </div>
 
     <!-- Application will be loaded here -->
+    <script src="analytics.js"></script>
+    <script src="domain-suggestions.js"></script>
+    <script src="domain-history.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

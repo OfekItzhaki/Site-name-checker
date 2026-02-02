@@ -57,8 +57,8 @@ describe('End-to-End Integration Tests', () => {
         expect(Array.isArray(response.results)).toBe(true);
         expect(response.results.length).toBeGreaterThan(0);
 
-        // Verify all TLDs were checked
-        const expectedTlds = ['.com', '.net', '.org', '.ai', '.dev', '.io', '.co'];
+        // Verify all TLDs were checked - updated to match current TLD count (19)
+        const expectedTlds = ['.com', '.net', '.org', '.ai', '.dev', '.io', '.co', '.app', '.tech', '.online', '.store', '.shop', '.site', '.blog', '.news', '.info', '.biz', '.me', '.tv'];
         const checkedTlds = response.results.map(result => result.tld);
         expectedTlds.forEach(tld => {
           expect(checkedTlds).toContain(tld);
@@ -87,7 +87,7 @@ describe('End-to-End Integration Tests', () => {
         unsubscribeState();
         unsubscribeProgress();
       }
-    }, 15000); // Increased timeout for network operations
+    }, 30000); // Increased timeout to 30 seconds for network operations
 
     test('should handle invalid domain input gracefully', async () => {
       // Arrange
@@ -207,7 +207,7 @@ describe('End-to-End Integration Tests', () => {
 
       // Some results may have errors, but system should remain stable
       // Should have attempted all TLDs
-      expect(response.results.length).toBe(7);
+      expect(response.results.length).toBe(19);
 
       // Even if some fail, system should remain in valid state
       const currentState = controller.getCurrentState();

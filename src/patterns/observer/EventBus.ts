@@ -100,6 +100,20 @@ export class EventBus implements IEventBus {
   }
 
   /**
+   * Emit an event (alias for publish)
+   */
+  emit<T>(event: string, data: T): void {
+    this.publish(event, data);
+  }
+
+  /**
+   * Listen to an event (alias for subscribe)
+   */
+  on<T>(event: string, handler: (data: T) => void): void {
+    this.subscribe(event, handler);
+  }
+
+  /**
    * Clear all event subscriptions
    */
   clear(): void {

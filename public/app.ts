@@ -56,11 +56,13 @@ class DomainCheckerClient {
   private failedDomains: string[];
   private retryAttempts: Map<string, number>;
   private maxRetryAttempts: number;
+  private analytics: any; // AnalyticsManager instance
   
   // DOM elements
   private domainForm!: HTMLFormElement;
   private domainInput!: HTMLInputElement;
   private checkButton!: HTMLButtonElement;
+  private bulkCheckButton!: HTMLButtonElement;
   private validationError!: HTMLDivElement;
   private resultsSection!: HTMLElement;
   private progressIndicator!: HTMLDivElement;
@@ -78,6 +80,9 @@ class DomainCheckerClient {
     this.retryAttempts = new Map();
     this.maxRetryAttempts = 3;
     
+    // Initialize analytics
+    this.analytics = new (window as any).AnalyticsManager();
+    
     this.initializeElements();
     this.setupEventListeners();
     this.checkApiHealth();
@@ -88,6 +93,7 @@ class DomainCheckerClient {
     this.domainForm = document.getElementById('domain-form') as HTMLFormElement;
     this.domainInput = document.getElementById('domain-input') as HTMLInputElement;
     this.checkButton = document.getElementById('check-button') as HTMLButtonElement;
+    this.bulkCheckButton = document.getElementById('bulk-check-button') as HTMLButtonElement;
     this.validationError = document.getElementById('validation-error') as HTMLDivElement;
 
     // Results elements
@@ -144,6 +150,111 @@ class DomainCheckerClient {
     this.domainInput.addEventListener('focus', () => {
       this.domainInput.select();
     });
+
+    // New feature buttons
+    this.setupNewFeatureListeners();
+  }
+
+  private setupNewFeatureListeners(): void {
+    // Bulk check functionality
+    this.bulkCheckButton?.addEventListener('click', () => {
+      this.toggleBulkMode();
+    });
+
+    // Show/hide filters and analytics
+    const showFiltersBtn = document.getElementById('show-filters');
+    const showAnalyticsBtn = document.getElementById('show-analytics');
+    const exportDataBtn = document.getElementById('export-data');
+
+    showFiltersBtn?.addEventListener('click', () => {
+      this.toggleFilters();
+    });
+
+    showAnalyticsBtn?.addEventListener('click', () => {
+      this.toggleAnalytics();
+    });
+
+    exportDataBtn?.addEventListener('click', () => {
+      this.exportAllData();
+    });
+  }
+
+  private toggleBulkMode(): void {
+    const bulkArea = document.getElementById('bulk-input-area');
+    if (bulkArea) {
+      bulkArea.classList.toggle('hidden');
+      this.bulkCheckButton.textContent = bulkArea.classList.contains('hidden') ? 'Bulk Check' : 'Single Check';
+    }
+  }
+
+  private toggleFilters(): void {
+    const filtersPanel = document.getElementById('advanced-filters');
+    const showBtn = document.getElementById('show-filters') as HTMLButtonElement;
+    
+    if (filtersPanel) {
+      filtersPanel.classList.toggle('hidden');
+      showBtn.textContent = filtersPanel.classList.contains('hidden') ? '🔍 Show Filters' : '🔍 Hide Filters';
+    }
+  }
+
+  private toggleAnalytics(): void {
+    const analyticsPanel = document.getElementById('analytics-panel');
+    const showBtn = document.getElementById('show-analytics') as HTMLButtonElement;
+    
+    if (analyticsPanel) {
+      analyticsPanel.classList.toggle('hidden');
+      showBtn.textContent = analyticsPanel.classList.contains('hidden') ? '📊 Show Analytics' : '📊 Hide Analytics';
+      
+      if (!analyticsPanel.classList.contains('hidden')) {
+        this.updateAnalyticsDisplay();
+      }
+    }
+  }
+
+  private updateAnalyticsDisplay(): void {
+    if (!this.analytics) return;
+
+    const metrics = this.analytics.getPerformanceSummary();
+    const popularTlds = this.analytics.getPopularTlds(5);
+
+    // Update metric displays
+    const totalSearchesEl = document.getElementById('total-searches');
+    const avgTimeEl = document.getElementById('avg-search-time');
+    const successRateEl = document.getElementById('success-rate');
+    const popularTldsEl = document.getElementById('popular-tlds-list');
+
+    if (totalSearchesEl) totalSearchesEl.textContent = metrics.totalSearches.toString();
+    if (avgTimeEl) avgTimeEl.textContent = `${Math.round(metrics.averageSearchTime)}ms`;
+    if (successRateEl) successRateEl.textContent = `${Math.round(100 - metrics.errorRate)}%`;
+    
+    if (popularTldsEl) {
+      popularTldsEl.innerHTML = popularTlds
+        .map((item: {tld: string, count: number}) => `<span class="tld-badge">${item.tld} (${item.count})</span>`)
+        .join('');
+    }
+  }
+
+  private exportAllData(): void {
+    const exportData = {
+      analytics: this.analytics?.exportData() || null,
+      currentResults: this.currentResults,
+      timestamp: new Date().toISOString(),
+      version: '1.0.0'
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `domain-checker-data-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    this.showTemporaryMessage('Data exported successfully!', 'success');
   }
 
   private handleKeyboardShortcuts(e: KeyboardEvent): void {
@@ -273,6 +384,11 @@ class DomainCheckerClient {
       setTimeout(() => {
         this.hideProgress();
         this.displayResults(result);
+        
+        // Track analytics
+        if (this.analytics) {
+          this.analytics.trackSearch(baseDomain, result.executionTime || 0, result.results || []);
+        }
       }, 500);
 
     } catch (error) {
@@ -641,4 +757,17 @@ document.head.appendChild(style);
 document.addEventListener('DOMContentLoaded', () => {
   (window as any).domainChecker = new DomainCheckerClient();
   console.log('Domain Availability Checker Client (TypeScript) initialized successfully');
+  
+  // Register service worker for PWA functionality
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
+  }
 });

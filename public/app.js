@@ -16,6 +16,8 @@ class DomainCheckerClient {
         this.failedDomains = [];
         this.retryAttempts = new Map();
         this.maxRetryAttempts = 3;
+        // Initialize analytics
+        this.analytics = new window.AnalyticsManager();
         this.initializeElements();
         this.setupEventListeners();
         this.checkApiHealth();
@@ -25,6 +27,7 @@ class DomainCheckerClient {
         this.domainForm = document.getElementById('domain-form');
         this.domainInput = document.getElementById('domain-input');
         this.checkButton = document.getElementById('check-button');
+        this.bulkCheckButton = document.getElementById('bulk-check-button');
         this.validationError = document.getElementById('validation-error');
         // Results elements
         this.resultsSection = document.getElementById('results-section');
@@ -73,6 +76,94 @@ class DomainCheckerClient {
         this.domainInput.addEventListener('focus', () => {
             this.domainInput.select();
         });
+        // New feature buttons
+        this.setupNewFeatureListeners();
+    }
+    setupNewFeatureListeners() {
+        // Bulk check functionality
+        this.bulkCheckButton?.addEventListener('click', () => {
+            this.toggleBulkMode();
+        });
+        // Show/hide filters and analytics
+        const showFiltersBtn = document.getElementById('show-filters');
+        const showAnalyticsBtn = document.getElementById('show-analytics');
+        const exportDataBtn = document.getElementById('export-data');
+        showFiltersBtn?.addEventListener('click', () => {
+            this.toggleFilters();
+        });
+        showAnalyticsBtn?.addEventListener('click', () => {
+            this.toggleAnalytics();
+        });
+        exportDataBtn?.addEventListener('click', () => {
+            this.exportAllData();
+        });
+    }
+    toggleBulkMode() {
+        const bulkArea = document.getElementById('bulk-input-area');
+        if (bulkArea) {
+            bulkArea.classList.toggle('hidden');
+            this.bulkCheckButton.textContent = bulkArea.classList.contains('hidden') ? 'Bulk Check' : 'Single Check';
+        }
+    }
+    toggleFilters() {
+        const filtersPanel = document.getElementById('advanced-filters');
+        const showBtn = document.getElementById('show-filters');
+        if (filtersPanel) {
+            filtersPanel.classList.toggle('hidden');
+            showBtn.textContent = filtersPanel.classList.contains('hidden') ? '🔍 Show Filters' : '🔍 Hide Filters';
+        }
+    }
+    toggleAnalytics() {
+        const analyticsPanel = document.getElementById('analytics-panel');
+        const showBtn = document.getElementById('show-analytics');
+        if (analyticsPanel) {
+            analyticsPanel.classList.toggle('hidden');
+            showBtn.textContent = analyticsPanel.classList.contains('hidden') ? '📊 Show Analytics' : '📊 Hide Analytics';
+            if (!analyticsPanel.classList.contains('hidden')) {
+                this.updateAnalyticsDisplay();
+            }
+        }
+    }
+    updateAnalyticsDisplay() {
+        if (!this.analytics)
+            return;
+        const metrics = this.analytics.getPerformanceSummary();
+        const popularTlds = this.analytics.getPopularTlds(5);
+        // Update metric displays
+        const totalSearchesEl = document.getElementById('total-searches');
+        const avgTimeEl = document.getElementById('avg-search-time');
+        const successRateEl = document.getElementById('success-rate');
+        const popularTldsEl = document.getElementById('popular-tlds-list');
+        if (totalSearchesEl)
+            totalSearchesEl.textContent = metrics.totalSearches.toString();
+        if (avgTimeEl)
+            avgTimeEl.textContent = `${Math.round(metrics.averageSearchTime)}ms`;
+        if (successRateEl)
+            successRateEl.textContent = `${Math.round(100 - metrics.errorRate)}%`;
+        if (popularTldsEl) {
+            popularTldsEl.innerHTML = popularTlds
+                .map((item) => `<span class="tld-badge">${item.tld} (${item.count})</span>`)
+                .join('');
+        }
+    }
+    exportAllData() {
+        const exportData = {
+            analytics: this.analytics?.exportData() || null,
+            currentResults: this.currentResults,
+            timestamp: new Date().toISOString(),
+            version: '1.0.0'
+        };
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `domain-checker-data-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        this.showTemporaryMessage('Data exported successfully!', 'success');
     }
     handleKeyboardShortcuts(e) {
         // Enter key - submit form (if input is focused)
@@ -181,6 +272,10 @@ class DomainCheckerClient {
             setTimeout(() => {
                 this.hideProgress();
                 this.displayResults(result);
+                // Track analytics
+                if (this.analytics) {
+                    this.analytics.trackSearch(baseDomain, result.executionTime || 0, result.results || []);
+                }
             }, 500);
         }
         catch (error) {
@@ -508,4 +603,16 @@ document.head.appendChild(style);
 document.addEventListener('DOMContentLoaded', () => {
     window.domainChecker = new DomainCheckerClient();
     console.log('Domain Availability Checker Client (TypeScript) initialized successfully');
+    // Register service worker for PWA functionality
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                console.log('SW registered: ', registration);
+            })
+                .catch((registrationError) => {
+                console.log('SW registration failed: ', registrationError);
+            });
+        });
+    }
 });

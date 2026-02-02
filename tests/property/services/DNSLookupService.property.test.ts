@@ -30,10 +30,16 @@ const mockDns = {
 
 describe('DNSLookupService Property Tests', () => {
   let service: DNSLookupService;
+  let consoleWarnSpy: jest.SpyInstance;
 
   beforeEach(() => {
     service = new DNSLookupService();
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
   });
 
   describe('Property: Domain Validation Consistency', () => {
@@ -393,8 +399,11 @@ describe('DNSLookupService Property Tests', () => {
               throw new Error(errorMessage);
             });
 
-            // Property: setDNSServers should not throw on error
+            // Property: setDNSServers should handle errors gracefully (logs warning but doesn't throw)
             expect(() => service.setDNSServers(['1.1.1.1'])).not.toThrow();
+            
+            // Verify that the error was logged as a warning
+            expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to set DNS servers:', expect.any(Error));
           }
         ),
         { numRuns: 10 }
@@ -409,6 +418,7 @@ describe('DNSLookupService Property Tests', () => {
           fc.ipV4(),
           fc.array(fc.domain(), { maxLength: 3 }),
           async (ip, hostnames) => {
+            // Mock successful reverse lookup
             mockDns.reverse.mockResolvedValue(hostnames);
 
             const result = await service.reverseLookup(ip);
@@ -420,6 +430,11 @@ describe('DNSLookupService Property Tests', () => {
             // Property: Should be deterministic for same input
             const result2 = await service.reverseLookup(ip);
             expect(result2).toEqual(result);
+            
+            // Test error case - should return empty array
+            mockDns.reverse.mockRejectedValue(new Error('DNS error'));
+            const errorResult = await service.reverseLookup(ip);
+            expect(errorResult).toEqual([]);
           }
         ),
         { numRuns: 15 }
