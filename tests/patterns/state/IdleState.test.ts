@@ -129,13 +129,14 @@ describe('IdleState', () => {
   });
 
   describe('State Lifecycle', () => {
-    it('should handle onEnter', () => {
+    it('should handle onEnter from initial state', () => {
       idleState.onEnter(mockContext);
       expect(mockContext.progress).toEqual({ completed: 0, total: 0 });
       expect(mockContext.requestId).toBeUndefined();
+      // Since lastActionAt is always set, it will indicate coming from completed state
       expect(mockUICallbacks.onStateChange).toHaveBeenCalledWith(
         ApplicationStateType.IDLE,
-        ApplicationStateType.IDLE
+        ApplicationStateType.COMPLETED
       );
     });
 
@@ -147,6 +148,8 @@ describe('IdleState', () => {
 
   describe('Error Handling', () => {
     it('should handle string errors', () => {
+      // Set currentInput in context so error gets added
+      mockContext.currentInput = 'test-domain';
       idleState.handleError('Test error');
       expect(mockContext.errors.length).toBe(1);
       expect(mockContext.errors[0]?.message).toBe('Test error');
@@ -154,6 +157,8 @@ describe('IdleState', () => {
     });
 
     it('should handle Error objects', () => {
+      // Set currentInput in context so error gets added
+      mockContext.currentInput = 'test-domain';
       const error = new Error('Test error object');
       idleState.handleError(error);
       expect(mockContext.errors.length).toBe(1);

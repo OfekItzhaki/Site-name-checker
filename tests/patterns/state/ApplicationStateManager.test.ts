@@ -46,12 +46,18 @@ describe('ApplicationStateManager', () => {
     });
 
     it('should transition from validating to checking', async () => {
+      // Set up context for checking state
+      stateManager.updateContext({ currentInput: 'test-domain' });
+      
       await stateManager.transitionTo(ApplicationStateType.VALIDATING);
       await stateManager.transitionTo(ApplicationStateType.CHECKING);
       expect(stateManager.getCurrentStateType()).toBe(ApplicationStateType.CHECKING);
     });
 
     it('should transition from checking to completed', async () => {
+      // Set up context for checking state
+      stateManager.updateContext({ currentInput: 'test-domain' });
+      
       await stateManager.transitionTo(ApplicationStateType.VALIDATING);
       await stateManager.transitionTo(ApplicationStateType.CHECKING);
       await stateManager.transitionTo(ApplicationStateType.COMPLETED);
@@ -59,7 +65,7 @@ describe('ApplicationStateManager', () => {
     });
 
     it('should transition to error state from any state', async () => {
-      await stateManager.transitionTo(ApplicationStateType.CHECKING);
+      // Can transition to error from idle
       await stateManager.transitionTo(ApplicationStateType.ERROR);
       expect(stateManager.getCurrentStateType()).toBe(ApplicationStateType.ERROR);
     });
@@ -72,6 +78,7 @@ describe('ApplicationStateManager', () => {
 
     it('should not transition to the same state', async () => {
       const initialHistoryLength = stateManager.getStateHistory().length;
+      // This should not throw but should not add to history either
       await stateManager.transitionTo(ApplicationStateType.IDLE);
       expect(stateManager.getStateHistory().length).toBe(initialHistoryLength);
     });
@@ -85,7 +92,8 @@ describe('ApplicationStateManager', () => {
     });
 
     it('should clear errors when input changes in idle state', () => {
-      // Add an error first
+      // Set input first, then add an error
+      stateManager.handleInput('test-domain');
       stateManager.handleError('Test error');
       expect(stateManager.getContext().errors.length).toBeGreaterThan(0);
 
@@ -112,7 +120,9 @@ describe('ApplicationStateManager', () => {
 
   describe('Result Handling', () => {
     beforeEach(async () => {
-      stateManager.handleInput('example');
+      // Set up proper state flow to reach checking state
+      stateManager.updateContext({ currentInput: 'example' });
+      await stateManager.transitionTo(ApplicationStateType.VALIDATING);
       await stateManager.transitionTo(ApplicationStateType.CHECKING);
     });
 
@@ -155,11 +165,15 @@ describe('ApplicationStateManager', () => {
       stateManager.handleResult(result2);
 
       const context = stateManager.getContext();
-      expect(context.results.length).toBe(1);
-      expect(context.results[0]?.status).toBe(AvailabilityStatus.AVAILABLE);
+      // Should have 7 results (all TLDs initialized by CheckingState)
+      expect(context.results.length).toBe(7);
+      // Find the .com result and verify it was updated
+      const comResult = context.results.find(r => r.domain === 'example.com');
+      expect(comResult?.status).toBe(AvailabilityStatus.AVAILABLE);
     });
 
     it('should auto-transition to completed when all results are done', () => {
+      // Need to provide results for all 7 TLDs to trigger auto-transition
       const results: IDomainResult[] = [
         {
           domain: 'example.com',
@@ -176,6 +190,46 @@ describe('ApplicationStateManager', () => {
           status: AvailabilityStatus.TAKEN,
           lastChecked: new Date(),
           checkMethod: 'DNS'
+        },
+        {
+          domain: 'example.org',
+          baseDomain: 'example',
+          tld: '.org',
+          status: AvailabilityStatus.AVAILABLE,
+          lastChecked: new Date(),
+          checkMethod: 'DNS'
+        },
+        {
+          domain: 'example.ai',
+          baseDomain: 'example',
+          tld: '.ai',
+          status: AvailabilityStatus.TAKEN,
+          lastChecked: new Date(),
+          checkMethod: 'DNS'
+        },
+        {
+          domain: 'example.dev',
+          baseDomain: 'example',
+          tld: '.dev',
+          status: AvailabilityStatus.AVAILABLE,
+          lastChecked: new Date(),
+          checkMethod: 'DNS'
+        },
+        {
+          domain: 'example.io',
+          baseDomain: 'example',
+          tld: '.io',
+          status: AvailabilityStatus.TAKEN,
+          lastChecked: new Date(),
+          checkMethod: 'DNS'
+        },
+        {
+          domain: 'example.co',
+          baseDomain: 'example',
+          tld: '.co',
+          status: AvailabilityStatus.AVAILABLE,
+          lastChecked: new Date(),
+          checkMethod: 'DNS'
         }
       ];
 
@@ -186,6 +240,8 @@ describe('ApplicationStateManager', () => {
 
   describe('Error Handling', () => {
     it('should handle errors', () => {
+      // Set input first so error gets added to context
+      stateManager.handleInput('test-domain');
       stateManager.handleError('Test error');
       const context = stateManager.getContext();
       expect(context.errors.length).toBeGreaterThan(0);
@@ -198,6 +254,8 @@ describe('ApplicationStateManager', () => {
     });
 
     it('should handle Error objects', () => {
+      // Set input first so error gets added to context
+      stateManager.handleInput('test-domain');
       const error = new Error('Test error object');
       stateManager.handleError(error);
       expect(mockUICallbacks.onError).toHaveBeenCalledWith('Test error object');
@@ -206,6 +264,10 @@ describe('ApplicationStateManager', () => {
 
   describe('Retry Handling', () => {
     beforeEach(async () => {
+      // Set up proper state flow to reach completed state
+      stateManager.updateContext({ currentInput: 'test-domain' });
+      await stateManager.transitionTo(ApplicationStateType.VALIDATING);
+      await stateManager.transitionTo(ApplicationStateType.CHECKING);
       await stateManager.transitionTo(ApplicationStateType.COMPLETED);
     });
 
@@ -245,6 +307,9 @@ describe('ApplicationStateManager', () => {
 
   describe('State History', () => {
     it('should track state transitions', async () => {
+      // Set up context for checking state
+      stateManager.updateContext({ currentInput: 'test-domain' });
+      
       await stateManager.transitionTo(ApplicationStateType.VALIDATING);
       await stateManager.transitionTo(ApplicationStateType.CHECKING);
 

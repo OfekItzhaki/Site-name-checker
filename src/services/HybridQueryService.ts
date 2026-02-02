@@ -224,6 +224,30 @@ export class HybridQueryService implements IQueryStrategy {
   }
 
   /**
+   * Get the service type identifier
+   * @returns Service type string
+   */
+  getServiceType(): string {
+    return 'HYBRID';
+  }
+
+  /**
+   * Get the current configuration
+   * @returns Configuration object
+   */
+  getConfig(): IStrategyConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Set configuration options
+   * @param config - Configuration object
+   */
+  setConfig(config: Partial<IStrategyConfig>): void {
+    this.config = { ...this.config, ...config };
+  }
+
+  /**
    * Determine if this strategy can handle the given domain
    * @param domain - Domain name to evaluate
    * @returns True if this strategy can handle the domain

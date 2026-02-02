@@ -66,14 +66,14 @@ export class ApplicationStateManager implements IApplicationStateManager {
   async transitionTo(newStateType: ApplicationStateType): Promise<void> {
     const currentStateType = this.currentState.getStateName();
     
-    // Check if transition is valid
-    if (!this.canTransitionTo(newStateType)) {
-      throw new Error(`Invalid state transition from ${currentStateType} to ${newStateType}`);
-    }
-
     // Don't transition to the same state
     if (currentStateType === newStateType) {
       return;
+    }
+
+    // Check if transition is valid
+    if (!this.canTransitionTo(newStateType)) {
+      throw new Error(`Invalid state transition from ${currentStateType} to ${newStateType}`);
     }
 
     // Record transition in history
