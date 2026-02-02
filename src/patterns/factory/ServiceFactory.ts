@@ -36,13 +36,24 @@ export class ServiceFactory implements IServiceFactory {
       return this.serviceInstances.get(cacheKey)!;
     }
     
-    const service = new DNSLookupService(finalConfig);
+    const service = new DNSLookupService();
     
-    if (cacheKey) {
-      this.serviceInstances.set(cacheKey, service);
+    // Configure service after creation with strategy config
+    if (config) {
+      const strategyConfig: any = {};
+      if (config.timeoutMs !== undefined) strategyConfig.timeout = config.timeoutMs;
+      if (config.maxRetries !== undefined) strategyConfig.retries = config.maxRetries;
+      strategyConfig.priority = 1;
+      strategyConfig.enabled = true;
+      
+      service.setConfig(strategyConfig);
     }
     
-    return service;
+    if (cacheKey) {
+      this.serviceInstances.set(cacheKey, service as any);
+    }
+    
+    return service as any;
   }
 
   /**
@@ -58,13 +69,24 @@ export class ServiceFactory implements IServiceFactory {
       return this.serviceInstances.get(cacheKey)!;
     }
     
-    const service = new WHOISQueryService(finalConfig);
+    const service = new WHOISQueryService();
     
-    if (cacheKey) {
-      this.serviceInstances.set(cacheKey, service);
+    // Configure service after creation with strategy config
+    if (config) {
+      const strategyConfig: any = {};
+      if (config.timeoutMs !== undefined) strategyConfig.timeout = config.timeoutMs;
+      if (config.maxRetries !== undefined) strategyConfig.retries = config.maxRetries;
+      strategyConfig.priority = 2;
+      strategyConfig.enabled = true;
+      
+      service.setConfig(strategyConfig);
     }
     
-    return service;
+    if (cacheKey) {
+      this.serviceInstances.set(cacheKey, service as any);
+    }
+    
+    return service as any;
   }
 
   /**
@@ -80,13 +102,24 @@ export class ServiceFactory implements IServiceFactory {
       return this.serviceInstances.get(cacheKey)!;
     }
     
-    const service = new HybridQueryService(finalConfig);
+    const service = new HybridQueryService();
     
-    if (cacheKey) {
-      this.serviceInstances.set(cacheKey, service);
+    // Configure service after creation with strategy config
+    if (config) {
+      const strategyConfig: any = {};
+      if (config.timeoutMs !== undefined) strategyConfig.timeout = config.timeoutMs;
+      if (config.maxRetries !== undefined) strategyConfig.retries = config.maxRetries;
+      strategyConfig.priority = 3;
+      strategyConfig.enabled = true;
+      
+      service.setConfig(strategyConfig);
     }
     
-    return service;
+    if (cacheKey) {
+      this.serviceInstances.set(cacheKey, service as any);
+    }
+    
+    return service as any;
   }
 
   /**

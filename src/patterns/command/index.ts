@@ -26,6 +26,15 @@ export type { ICommandStatistics } from './CommandInvoker';
 export { CommandQueue, CommandPriority } from './CommandQueue';
 export type { ICommandQueueConfig, IQueueStatistics } from './CommandQueue';
 
+// Import classes for utility functions
+import { DomainCheckCommand } from './DomainCheckCommand';
+import { BatchDomainCheckCommand } from './BatchDomainCheckCommand';
+import { CommandInvoker } from './CommandInvoker';
+import { CommandQueue, CommandPriority } from './CommandQueue';
+import type { IRetryConfig } from './ICommand';
+import type { IBatchDomainCheckConfig } from './BatchDomainCheckCommand';
+import type { ICommandQueueConfig } from './CommandQueue';
+
 // Utility functions for command pattern
 export const CommandUtils = {
   /**
