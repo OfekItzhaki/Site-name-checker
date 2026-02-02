@@ -20,6 +20,7 @@ class DomainCheckerClient {
         this.analytics = new window.AnalyticsManager();
         this.initializeElements();
         this.setupEventListeners();
+        this.clearAllData(); // Clear any residual data on startup
         this.checkApiHealth();
     }
     initializeElements() {
@@ -349,8 +350,7 @@ class DomainCheckerClient {
         }
         // Escape key - clear input and results
         if (e.key === 'Escape') {
-            this.clearResults();
-            this.domainInput.value = '';
+            this.clearAllData();
             this.domainInput.focus();
         }
         // Ctrl/Cmd + K - focus search input
@@ -741,6 +741,35 @@ class DomainCheckerClient {
         this.currentResults = [];
         this.failedDomains = [];
         this.retryAttempts.clear();
+    }
+    /**
+     * Clear all application data and reset to initial state
+     */
+    clearAllData() {
+        // Clear results and UI state
+        this.clearResults();
+        // Clear input fields
+        if (this.domainInput) {
+            this.domainInput.value = '';
+        }
+        if (this.bulkDomainsInput) {
+            this.bulkDomainsInput.value = '';
+        }
+        // Hide all error messages
+        this.hideValidationError();
+        this.hideError();
+        // Reset to single mode
+        if (this.singleModeBtn && this.bulkModeBtn) {
+            this.switchToSingleMode();
+        }
+        // Clear any browser storage (if any exists)
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+        }
+        catch (e) {
+            // Ignore storage errors
+        }
     }
     showValidationError(message) {
         this.validationError.textContent = message;

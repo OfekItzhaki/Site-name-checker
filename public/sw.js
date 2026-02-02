@@ -1,5 +1,5 @@
 // Service Worker for Domain Availability Checker
-const CACHE_NAME = 'domain-checker-v1';
+const CACHE_NAME = 'domain-checker-v2'; // Updated version to clear old cache
 const urlsToCache = [
   '/',
   '/index.html',
