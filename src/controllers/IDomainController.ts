@@ -1,202 +1,160 @@
-import type { IDomainResult } from '../models';
-import type { ApplicationStateType } from '../patterns/state/IApplicationState';
+import type { IQueryRequest, IQueryResponse, IQueryError } from '../models';
 
 /**
- * Interface for UI callbacks from the domain controller
- * Provides strict separation between UI and business logic
- */
-export interface IUICallbacks {
-  /**
-   * Called when input validation fails
-   * @param message - Validation error message
-   */
-  onValidationError(message: string): void;
-
-  /**
-   * Called when domain availability check starts
-   * @param domains - Array of domains being checked
-   */
-  onCheckStarted(domains: string[]): void;
-
-  /**
-   * Called when a single domain result is updated
-   * @param result - Updated domain result
-   */
-  onResultUpdate(result: IDomainResult): void;
-
-  /**
-   * Called when all domain checks are completed
-   * @param results - Array of all domain results
-   */
-  onCheckCompleted(results: IDomainResult[]): void;
-
-  /**
-   * Called when an error occurs during processing
-   * @param error - Error message
-   */
-  onError(error: string): void;
-
-  /**
-   * Called when application state changes
-   * @param newState - New application state
-   * @param oldState - Previous application state
-   */
-  onStateChange(newState: ApplicationStateType, oldState: ApplicationStateType): void;
-
-  /**
-   * Called to update progress during bulk operations
-   * @param progress - Progress information
-   */
-  onProgressUpdate(progress: { completed: number; total: number }): void;
-}
-
-/**
- * Interface for the main domain controller
- * Orchestrates domain checking workflow and manages application state
+ * Interface for Domain Controller - main orchestration layer
  */
 export interface IDomainController {
   /**
-   * Check domain availability for a base domain across multiple TLDs
-   * @param baseDomain - Base domain name to check
-   * @returns Promise that resolves when checking is complete
+   * Check availability for a single domain
+   * @param domainName - Domain name to check
+   * @returns Promise resolving to query response
    */
-  checkDomainAvailability(baseDomain: string): Promise<void>;
+  checkDomain(domainName: string): Promise<IQueryResponse>;
 
   /**
-   * Register UI callback functions for receiving updates
-   * @param callbacks - Object containing callback functions
+   * Check availability for multiple domains concurrently
+   * @param domainNames - Array of domain names to check
+   * @returns Promise resolving to query response with all results
    */
-  registerCallbacks(callbacks: IUICallbacks): void;
+  checkDomains(domainNames: string[]): Promise<IQueryResponse>;
 
   /**
-   * Get the current application state
-   * @returns Current application state type
+   * Get current application state
+   * @returns Current state information
    */
-  getCurrentState(): ApplicationStateType;
+  getCurrentState(): {
+    state: string;
+    canTransition: boolean;
+    availableTransitions: string[];
+  };
 
   /**
-   * Get current domain results
-   * @returns Array of current domain results
+   * Subscribe to state change events
+   * @param callback - Function to call when state changes
+   * @returns Unsubscribe function
    */
-  getCurrentResults(): IDomainResult[];
+  onStateChange(callback: (event: any) => void): () => void;
 
   /**
-   * Retry failed domain checks
-   * @param domain - Optional specific domain to retry, if not provided retries all failed
-   * @returns Promise that resolves when retry is complete
+   * Subscribe to domain check progress events
+   * @param callback - Function to call on progress updates
+   * @returns Unsubscribe function
    */
-  retryFailedChecks(domain?: string): Promise<void>;
+  onProgress(callback: (event: any) => void): () => void;
 
   /**
-   * Cancel ongoing domain checks
-   * @returns Promise that resolves when cancellation is complete
+   * Subscribe to error events
+   * @param callback - Function to call on errors
+   * @returns Unsubscribe function
    */
-  cancelChecks(): Promise<void>;
+  onError(callback: (event: any) => void): () => void;
 
   /**
-   * Clear all results and reset to initial state
+   * Reset the controller to idle state
    */
   reset(): void;
 
   /**
-   * Get controller configuration
-   * @returns Current controller configuration
+   * Configure query engine timeout
+   * @param timeout - Timeout in milliseconds
    */
-  getConfig(): IDomainControllerConfig;
+  setTimeout(timeout: number): void;
 
   /**
-   * Update controller configuration
-   * @param config - Partial configuration updates
+   * Dispose of resources and clean up
    */
-  updateConfig(config: Partial<IDomainControllerConfig>): void;
-
-  /**
-   * Get supported TLDs
-   * @returns Array of supported TLD strings
-   */
-  getSupportedTLDs(): string[];
-
-  /**
-   * Check if controller is currently processing
-   * @returns True if processing is in progress
-   */
-  isProcessing(): boolean;
-
-  /**
-   * Get processing statistics
-   * @returns Processing statistics
-   */
-  getStatistics(): IControllerStatistics;
+  dispose(): void;
 }
 
 /**
- * Configuration interface for domain controller
+ * Configuration options for Domain Controller
  */
 export interface IDomainControllerConfig {
-  /** TLDs to check by default */
-  defaultTLDs: string[];
-  /** Timeout for individual domain checks in milliseconds */
-  checkTimeoutMs: number;
-  /** Maximum number of concurrent checks */
-  maxConcurrentChecks: number;
-  /** Whether to use DNS first strategy */
-  useDNSFirst: boolean;
-  /** Whether to fallback to WHOIS on DNS failure */
-  fallbackToWHOIS: boolean;
-  /** Maximum retry attempts for failed checks */
-  maxRetries: number;
-  /** Delay between retry attempts in milliseconds */
-  retryDelayMs: number;
-  /** Whether to use exponential backoff for retries */
-  useExponentialBackoff: boolean;
+  /** Default timeout for domain queries in milliseconds */
+  defaultTimeout?: number;
+  /** Maximum number of concurrent domain checks */
+  maxConcurrentChecks?: number;
+  /** Enable DNS-based checking */
+  enableDNS?: boolean;
+  /** Enable WHOIS-based checking */
+  enableWHOIS?: boolean;
+  /** Enable hybrid checking strategy */
+  enableHybrid?: boolean;
+  /** Rate limiting configuration */
+  rateLimiting?: {
+    enabled: boolean;
+    maxRequestsPerMinute: number;
+  };
 }
 
 /**
- * Statistics interface for controller operations
+ * UI callback functions for loose coupling with presentation layer
+ */
+export interface IUICallbacks {
+  /** Called when domain check starts */
+  onCheckStart?: (request: IQueryRequest) => void;
+  /** Called when domain check completes successfully */
+  onCheckComplete?: (response: IQueryResponse) => void;
+  /** Called when domain check fails */
+  onCheckError?: (error: IQueryError) => void;
+  /** Called when validation fails */
+  onValidationError?: (errors: IValidationError[]) => void;
+  /** Called for progress updates during batch operations */
+  onProgress?: (progress: { completed: number; total: number; current?: string }) => void;
+  /** Called when application state changes */
+  onStateChange?: (state: string, data?: any) => void;
+}
+
+/**
+ * Controller performance and usage statistics
  */
 export interface IControllerStatistics {
-  /** Total number of domains checked */
-  totalDomainsChecked: number;
-  /** Number of successful checks */
-  successfulChecks: number;
-  /** Number of failed checks */
-  failedChecks: number;
-  /** Average check time in milliseconds */
-  averageCheckTime: number;
-  /** Total processing time in milliseconds */
-  totalProcessingTime: number;
-  /** Success rate as percentage */
-  successRate: number;
-  /** Most recent check timestamp */
-  lastCheckAt?: Date;
-  /** Number of retries performed */
-  totalRetries: number;
+  /** Total number of requests processed */
+  totalRequests: number;
+  /** Number of successful requests */
+  successfulRequests: number;
+  /** Number of failed requests */
+  failedRequests: number;
+  /** Average execution time in milliseconds */
+  averageExecutionTime: number;
+  /** Last execution time in milliseconds */
+  lastExecutionTime: number;
+  /** Most common error types */
+  commonErrors: Array<{ code: string; count: number }>;
+  /** Performance metrics by query method */
+  performanceByMethod: {
+    dns: { count: number; averageTime: number };
+    whois: { count: number; averageTime: number };
+    hybrid: { count: number; averageTime: number };
+  };
 }
 
 /**
- * Interface for domain validation results
+ * Domain validation result
  */
 export interface IValidationResult {
-  /** Whether the input is valid */
+  /** Whether the domain is valid */
   isValid: boolean;
-  /** Validation error message if invalid */
-  errorMessage?: string;
-  /** Sanitized/normalized input if valid */
-  sanitizedInput?: string;
-  /** Specific validation errors */
-  errors: IValidationError[];
+  /** Sanitized domain name (normalized) */
+  sanitizedDomain: string;
+  /** Array of validation errors */
+  errors: string[];
+  /** Validation warnings (non-blocking) */
+  warnings?: string[];
+  /** Suggested corrections */
+  suggestions?: string[];
 }
 
 /**
- * Interface for specific validation errors
+ * Individual validation error
  */
 export interface IValidationError {
-  /** Field that failed validation */
-  field: string;
-  /** Error code */
+  /** Error code for programmatic handling */
   code: string;
   /** Human-readable error message */
   message: string;
-  /** Invalid value that caused the error */
-  value: any;
+  /** Field or domain that caused the error */
+  field: string;
+  /** Suggested fix for the error */
+  suggestion?: string;
 }

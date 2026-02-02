@@ -1,5 +1,5 @@
 import type { IInputValidator } from './IInputValidator';
-import type { IValidationResult, IValidationError } from '../controllers/IDomainController';
+import type { IValidationResult } from '../controllers/IDomainController';
 
 /**
  * Input validator for domain names
@@ -24,27 +24,17 @@ export class InputValidator implements IInputValidator {
    * @returns Validation result with detailed error information
    */
   public validateDomainName(domain: string): IValidationResult {
-    const errors: IValidationError[] = [];
+    const errors: string[] = [];
     
     // Check if input is empty or invalid type
     if (typeof domain !== 'string' || !domain.trim()) {
-      errors.push({
-        field: 'domain',
-        code: 'EMPTY_INPUT',
-        message: 'Domain name cannot be empty',
-        value: domain
-      });
+      errors.push('Domain name cannot be empty');
       
-      const result: IValidationResult = {
+      return {
         isValid: false,
+        sanitizedDomain: '',
         errors
       };
-      
-      if (errors.length > 0 && errors[0]?.message) {
-        result.errorMessage = errors[0].message;
-      }
-      
-      return result;
     }
 
     // Sanitize input for further validation
@@ -52,23 +42,13 @@ export class InputValidator implements IInputValidator {
     
     // Check if input is empty after sanitization
     if (!sanitizedInput) {
-      errors.push({
-        field: 'domain',
-        code: 'EMPTY_INPUT',
-        message: 'Domain name cannot be empty',
-        value: domain
-      });
+      errors.push('Domain name cannot be empty');
       
-      const result: IValidationResult = {
+      return {
         isValid: false,
+        sanitizedDomain: '',
         errors
       };
-      
-      if (errors.length > 0 && errors[0]?.message) {
-        result.errorMessage = errors[0].message;
-      }
-      
-      return result;
     }
 
     // Validate length
@@ -77,71 +57,37 @@ export class InputValidator implements IInputValidator {
         ? `Domain name must be at least ${InputValidator.MIN_LENGTH} character long`
         : `Domain name must be no more than ${InputValidator.MAX_LENGTH} characters long`;
       
-      errors.push({
-        field: 'domain',
-        code: 'INVALID_LENGTH',
-        message,
-        value: sanitizedInput
-      });
+      errors.push(message);
     }
 
     // Validate characters - check original trimmed input, not sanitized
     const trimmedInput = domain.trim().toLowerCase();
     if (!this.hasValidCharacters(trimmedInput)) {
-      errors.push({
-        field: 'domain',
-        code: 'INVALID_CHARACTERS',
-        message: 'Domain name can only contain letters, numbers, and hyphens',
-        value: trimmedInput
-      });
+      errors.push('Domain name can only contain letters, numbers, and hyphens');
     }
 
     // Validate format - use sanitized input for format checks
     if (!this.hasValidFormat(sanitizedInput)) {
-      errors.push({
-        field: 'domain',
-        code: 'INVALID_FORMAT',
-        message: 'Domain name cannot start or end with a hyphen',
-        value: sanitizedInput
-      });
+      errors.push('Domain name cannot start or end with a hyphen');
     }
 
     // Check for consecutive hyphens at positions 3-4 (reserved for IDN)
     if (InputValidator.CONSECUTIVE_HYPHEN_REGEX.test(sanitizedInput)) {
-      errors.push({
-        field: 'domain',
-        code: 'RESERVED_FORMAT',
-        message: 'Domain name cannot have consecutive hyphens at positions 3-4 (reserved for internationalized domains)',
-        value: sanitizedInput
-      });
+      errors.push('Domain name cannot have consecutive hyphens at positions 3-4 (reserved for internationalized domains)');
     }
 
     // Check for all numeric domain (not allowed)
     if (/^\d+$/.test(sanitizedInput)) {
-      errors.push({
-        field: 'domain',
-        code: 'ALL_NUMERIC',
-        message: 'Domain name cannot be all numeric',
-        value: sanitizedInput
-      });
+      errors.push('Domain name cannot be all numeric');
     }
 
     const isValid = errors.length === 0;
 
-    const result: IValidationResult = {
+    return {
       isValid,
+      sanitizedDomain: isValid ? sanitizedInput : '',
       errors
     };
-
-    if (errors.length > 0 && errors[0]?.message) {
-      result.errorMessage = errors[0].message;
-    }
-
-    if (isValid && sanitizedInput) {
-      result.sanitizedInput = sanitizedInput;
-    }
-
-    return result;
   }
 
   /**
