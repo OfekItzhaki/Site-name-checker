@@ -69,10 +69,10 @@ describe('DNSLookupService', () => {
     });
 
     test('should update configuration correctly', () => {
-      service.setConfig({ timeout: 3000, retries: 1 });
+      service.setConfig({ timeoutMs: 3000, maxRetries: 1 });
       const config = service.getConfig();
-      expect(config.timeout).toBe(3000);
-      expect(config.retries).toBe(1);
+      expect(config.timeoutMs).toBe(3000);
+      expect(config.maxRetries).toBe(1);
       expect(config.priority).toBe(2); // Should remain unchanged
     });
   });
@@ -404,7 +404,7 @@ describe('DNSLookupService', () => {
     });
 
     test('should respect custom timeout configuration', async () => {
-      service.setConfig({ timeout: 1000 });
+      service.setConfig({ timeoutMs: 1000 });
       
       mockDns.resolve4.mockImplementation(() => new Promise(() => {}));
       mockDns.resolve6.mockImplementation(() => new Promise(() => {}));

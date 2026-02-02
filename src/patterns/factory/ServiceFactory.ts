@@ -28,12 +28,12 @@ export class ServiceFactory implements IServiceFactory {
    * @param config - Optional service configuration
    * @returns DNS query service instance
    */
-  createDNSService(config?: Partial<IServiceConfig>): IQueryService {
+  createDNSService(config?: Partial<IServiceConfig>): DNSLookupService {
     const finalConfig = { ...this.defaultConfig, ...config };
     const cacheKey = this.enableCaching ? `DNS_${this.getConfigHash(finalConfig)}` : null;
     
     if (cacheKey && this.serviceInstances.has(cacheKey)) {
-      return this.serviceInstances.get(cacheKey)!;
+      return this.serviceInstances.get(cacheKey)! as DNSLookupService;
     }
     
     const service = new DNSLookupService();
@@ -48,14 +48,11 @@ export class ServiceFactory implements IServiceFactory {
       enabled: true
     });
     
-    // Create adapter to match IQueryService interface
-    const adapter = this.createServiceAdapter(service, finalConfig);
-    
     if (cacheKey) {
-      this.serviceInstances.set(cacheKey, adapter);
+      this.serviceInstances.set(cacheKey, service as any);
     }
     
-    return adapter;
+    return service;
   }
 
   /**
@@ -63,12 +60,12 @@ export class ServiceFactory implements IServiceFactory {
    * @param config - Optional service configuration
    * @returns WHOIS query service instance
    */
-  createWHOISService(config?: Partial<IServiceConfig>): IQueryService {
+  createWHOISService(config?: Partial<IServiceConfig>): WHOISQueryService {
     const finalConfig = { ...this.defaultConfig, ...config };
     const cacheKey = this.enableCaching ? `WHOIS_${this.getConfigHash(finalConfig)}` : null;
     
     if (cacheKey && this.serviceInstances.has(cacheKey)) {
-      return this.serviceInstances.get(cacheKey)!;
+      return this.serviceInstances.get(cacheKey)! as WHOISQueryService;
     }
     
     const service = new WHOISQueryService();
@@ -83,14 +80,11 @@ export class ServiceFactory implements IServiceFactory {
       enabled: true
     });
     
-    // Create adapter to match IQueryService interface
-    const adapter = this.createServiceAdapter(service, finalConfig);
-    
     if (cacheKey) {
-      this.serviceInstances.set(cacheKey, adapter);
+      this.serviceInstances.set(cacheKey, service as any);
     }
     
-    return adapter;
+    return service;
   }
 
   /**
@@ -98,12 +92,12 @@ export class ServiceFactory implements IServiceFactory {
    * @param config - Optional service configuration
    * @returns Hybrid query service instance
    */
-  createHybridService(config?: Partial<IServiceConfig>): IQueryService {
+  createHybridService(config?: Partial<IServiceConfig>): HybridQueryService {
     const finalConfig = { ...this.defaultConfig, ...config };
     const cacheKey = this.enableCaching ? `HYBRID_${this.getConfigHash(finalConfig)}` : null;
     
     if (cacheKey && this.serviceInstances.has(cacheKey)) {
-      return this.serviceInstances.get(cacheKey)!;
+      return this.serviceInstances.get(cacheKey)! as HybridQueryService;
     }
     
     const service = new HybridQueryService();
@@ -118,14 +112,11 @@ export class ServiceFactory implements IServiceFactory {
       enabled: true
     });
     
-    // Create adapter to match IQueryService interface
-    const adapter = this.createServiceAdapter(service, finalConfig);
-    
     if (cacheKey) {
-      this.serviceInstances.set(cacheKey, adapter);
+      this.serviceInstances.set(cacheKey, service as any);
     }
     
-    return adapter;
+    return service;
   }
 
   /**
@@ -241,35 +232,7 @@ export class ServiceFactory implements IServiceFactory {
     return JSON.stringify(config);
   }
 
-  /**
-   * Create an adapter to bridge IQueryStrategy and IQueryService interfaces
-   * @param strategy - The strategy service to adapt
-   * @param config - Service configuration
-   * @returns Adapted service matching IQueryService interface
-   */
-  private createServiceAdapter(strategy: any, config: IServiceConfig): IQueryService {
-    return {
-      checkDomain: (domain: string) => strategy.execute(domain),
-      getServiceType: () => strategy.getServiceType(),
-      getConfig: () => ({
-        timeoutMs: config.timeoutMs,
-        maxRetries: config.maxRetries,
-        retryDelayMs: config.retryDelayMs,
-        useExponentialBackoff: config.useExponentialBackoff
-      }),
-      setConfig: (newConfig: Partial<IServiceConfig>) => {
-        const updatedConfig = { ...config, ...newConfig };
-        strategy.setConfig({
-          timeoutMs: updatedConfig.timeoutMs,
-          maxRetries: updatedConfig.maxRetries,
-          retryDelayMs: updatedConfig.retryDelayMs,
-          useExponentialBackoff: updatedConfig.useExponentialBackoff,
-          priority: strategy.getPriority(),
-          enabled: true
-        });
-      }
-    };
-  }
+
 
   /**
    * Clear all cached service instances

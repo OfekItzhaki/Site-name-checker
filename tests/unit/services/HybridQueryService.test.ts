@@ -79,10 +79,10 @@ describe('HybridQueryService', () => {
     });
 
     test('should update configuration correctly', () => {
-      service.setConfig({ timeout: 10000, retries: 1 });
+      service.setConfig({ timeoutMs: 10000, maxRetries: 1 });
       const config = service.getConfig();
-      expect(config.timeout).toBe(10000);
-      expect(config.retries).toBe(1);
+      expect(config.timeoutMs).toBe(10000);
+      expect(config.maxRetries).toBe(1);
       expect(config.priority).toBe(3); // Should remain unchanged
     });
   });
@@ -303,7 +303,7 @@ describe('HybridQueryService', () => {
 
   describe('Configuration Management', () => {
     test('should update underlying service configurations when timeout changes', () => {
-      service.setConfig({ timeout: 8000 });
+      service.setConfig({ timeoutMs: 8000 });
 
       expect(mockDnsService.setConfig).toHaveBeenCalledWith({ timeout: 4000 });
       expect(mockWhoisService.setConfig).toHaveBeenCalledWith({ timeout: 4000 });
@@ -405,7 +405,7 @@ describe('HybridQueryService', () => {
       mockWhoisService.execute.mockImplementation(() => new Promise(() => {}));
 
       // Set a very short timeout for testing
-      service.setConfig({ timeout: 100 });
+      service.setConfig({ timeoutMs: 100 });
 
       const result = await service.execute('example.com');
 

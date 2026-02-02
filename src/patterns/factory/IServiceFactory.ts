@@ -1,3 +1,7 @@
+import type { DNSLookupService } from '../../services/DNSLookupService';
+import type { WHOISQueryService } from '../../services/WHOISQueryService';
+import type { HybridQueryService } from '../../services/HybridQueryService';
+
 /**
  * Interface for query services created by the factory
  */
@@ -52,21 +56,21 @@ export interface IServiceFactory {
    * @param config - Optional service configuration
    * @returns DNS query service instance
    */
-  createDNSService(config?: Partial<IServiceConfig>): IQueryService;
+  createDNSService(config?: Partial<IServiceConfig>): DNSLookupService;
 
   /**
    * Create a WHOIS query service
    * @param config - Optional service configuration
    * @returns WHOIS query service instance
    */
-  createWHOISService(config?: Partial<IServiceConfig>): IQueryService;
+  createWHOISService(config?: Partial<IServiceConfig>): WHOISQueryService;
 
   /**
    * Create a hybrid service (DNS + WHOIS)
    * @param config - Optional service configuration
    * @returns Hybrid query service instance
    */
-  createHybridService(config?: Partial<IServiceConfig>): IQueryService;
+  createHybridService(config?: Partial<IServiceConfig>): HybridQueryService;
 
   /**
    * Get service by type

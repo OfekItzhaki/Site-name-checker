@@ -41,6 +41,11 @@ describe('State Pattern Property Tests', () => {
         let currentState = ApplicationStateType.IDLE;
 
         for (const targetState of stateSequence) {
+          // Set up context for states that require it
+          if (targetState === ApplicationStateType.CHECKING || targetState === ApplicationStateType.VALIDATING) {
+            stateManager.getContext().currentInput = 'test-domain';
+          }
+          
           if (stateManager.canTransitionTo(targetState)) {
             await stateManager.transitionTo(targetState);
             currentState = targetState;
@@ -273,6 +278,9 @@ describe('State Pattern Property Tests', () => {
       }),
       async (resultData) => {
         stateManager.reset();
+        
+        // Set up context before transitioning to checking state
+        stateManager.getContext().currentInput = resultData.domain;
         await stateManager.transitionTo(ApplicationStateType.CHECKING);
 
         const result: IDomainResult = {
@@ -315,6 +323,9 @@ describe('State Pattern Property Tests', () => {
       }), { minLength: 1, maxLength: 10 }),
       async (operations) => {
         stateManager.reset();
+        
+        // Set up context before transitioning to checking state
+        stateManager.getContext().currentInput = 'test-domain';
         await stateManager.transitionTo(ApplicationStateType.CHECKING);
 
         // Execute operations

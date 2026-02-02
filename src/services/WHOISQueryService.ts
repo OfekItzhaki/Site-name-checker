@@ -21,6 +21,23 @@ export class WHOISQueryService implements IQueryStrategy {
   private lastRequestTime = 0;
 
   /**
+   * Check domain availability (alias for execute method)
+   * @param domain - Full domain name to check
+   * @returns Promise resolving to domain result
+   */
+  async checkDomain(domain: string): Promise<IDomainResult> {
+    return this.execute(domain);
+  }
+
+  /**
+   * Get service configuration
+   * @returns Current service configuration
+   */
+  getConfig(): IStrategyConfig {
+    return { ...this.config };
+  }
+
+  /**
    * Execute WHOIS-based domain availability check
    * @param domain - Full domain name to check
    * @returns Promise resolving to domain result

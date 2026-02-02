@@ -254,7 +254,7 @@ describe('WHOISQueryService Property Tests', () => {
           }),
           async ({ domain, timeout }) => {
             const fullDomain = domain.baseName + domain.tld;
-            service.setConfig({ timeout });
+            service.setConfig({ timeoutMs: timeout });
 
             mockWhoisLookup.mockImplementation((_domain: string, _callback: any) => {
               // Never call callback to simulate timeout
@@ -289,7 +289,7 @@ describe('WHOISQueryService Property Tests', () => {
           }),
           async ({ domain, retries, errorMessage }) => {
             const fullDomain = domain.baseName + domain.tld;
-            service.setConfig({ retries });
+            service.setConfig({ maxRetries: retries });
 
             let attemptCount = 0;
             mockWhoisLookup.mockImplementation((_domain: string, callback: any) => {
@@ -325,8 +325,8 @@ describe('WHOISQueryService Property Tests', () => {
             const retrievedConfig = service.getConfig();
 
             // Configuration should be applied correctly
-            expect(retrievedConfig.timeout).toBe(config.timeout);
-            expect(retrievedConfig.retries).toBe(config.retries);
+            expect(retrievedConfig.timeoutMs).toBe(config.timeoutMs);
+            expect(retrievedConfig.maxRetries).toBe(config.maxRetries);
             expect(retrievedConfig.priority).toBe(config.priority);
             expect(retrievedConfig.enabled).toBe(config.enabled);
 
@@ -418,8 +418,8 @@ describe('WHOISQueryService Property Tests', () => {
             
             const config = service.getConfig();
             expect(typeof config).toBe('object');
-            expect(typeof config.timeout).toBe('number');
-            expect(typeof config.retries).toBe('number');
+            expect(typeof config.timeoutMs).toBe('number');
+            expect(typeof config.maxRetries).toBe('number');
             expect(typeof config.priority).toBe('number');
             expect(typeof config.enabled).toBe('boolean');
           }

@@ -50,10 +50,10 @@ describe('WHOISQueryService', () => {
     });
 
     test('should update configuration correctly', () => {
-      service.setConfig({ timeout: 5000, retries: 1 });
+      service.setConfig({ timeoutMs: 5000, maxRetries: 1 });
       const config = service.getConfig();
-      expect(config.timeout).toBe(5000);
-      expect(config.retries).toBe(1);
+      expect(config.timeoutMs).toBe(5000);
+      expect(config.maxRetries).toBe(1);
       expect(config.priority).toBe(1); // Should remain unchanged
     });
   });
@@ -180,7 +180,7 @@ describe('WHOISQueryService', () => {
     });
 
     test('should handle timeout correctly', async () => {
-      service.setConfig({ timeout: 1000 });
+      service.setConfig({ timeoutMs: 1000 });
       
       mockWhoisLookup.mockImplementation((_domain: string, _callback: any) => {
         // Never call callback to simulate timeout
@@ -324,7 +324,7 @@ describe('WHOISQueryService', () => {
     });
 
     test('should respect custom retry configuration', async () => {
-      service.setConfig({ retries: 1 });
+      service.setConfig({ maxRetries: 1 });
       let attemptCount = 0;
       
       mockWhoisLookup.mockImplementation((_domain: string, callback: any) => {
@@ -480,7 +480,7 @@ describe('WHOISQueryService', () => {
     });
 
     test('should respect custom timeout configuration', async () => {
-      service.setConfig({ timeout: 2000 });
+      service.setConfig({ timeoutMs: 2000 });
       
       mockWhoisLookup.mockImplementation((_domain: string, _callback: any) => {
         // Never call callback to simulate timeout

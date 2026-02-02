@@ -187,8 +187,8 @@ describe('DNSLookupService Property Tests', () => {
             const newConfig = service.getConfig();
             
             // Property: Set values should be reflected in config
-            expect(newConfig.timeout).toBe(config.timeout);
-            expect(newConfig.retries).toBe(config.retries);
+            expect(newConfig.timeoutMs).toBe(config.timeoutMs);
+            expect(newConfig.maxRetries).toBe(config.maxRetries);
             expect(newConfig.priority).toBe(config.priority);
             expect(newConfig.enabled).toBe(config.enabled);
             
@@ -199,10 +199,10 @@ describe('DNSLookupService Property Tests', () => {
             expect(configCopy1).toEqual(configCopy2);
             
             // Property: Partial updates should preserve other values
-            service.setConfig({ timeout: originalConfig.timeout });
+            service.setConfig({ timeoutMs: originalConfig.timeoutMs });
             const partialConfig = service.getConfig();
-            expect(partialConfig.timeout).toBe(originalConfig.timeout);
-            expect(partialConfig.retries).toBe(config.retries); // Should remain from previous set
+            expect(partialConfig.timeoutMs).toBe(originalConfig.timeoutMs);
+            expect(partialConfig.maxRetries).toBe(config.maxRetries); // Should remain from previous set
           }
         ),
         { numRuns: 20 }
@@ -358,8 +358,8 @@ describe('DNSLookupService Property Tests', () => {
             expect(config).toHaveProperty('retries');
             expect(config).toHaveProperty('priority');
             expect(config).toHaveProperty('enabled');
-            expect(typeof config.timeout).toBe('number');
-            expect(typeof config.retries).toBe('number');
+            expect(typeof config.timeoutMs).toBe('number');
+            expect(typeof config.maxRetries).toBe('number');
             expect(typeof config.priority).toBe('number');
             expect(typeof config.enabled).toBe('boolean');
           }

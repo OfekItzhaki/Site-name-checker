@@ -32,6 +32,23 @@ export class HybridQueryService implements IQueryStrategy {
   }
 
   /**
+   * Check domain availability (alias for execute method)
+   * @param domain - Full domain name to check
+   * @returns Promise resolving to domain result
+   */
+  async checkDomain(domain: string): Promise<IDomainResult> {
+    return this.execute(domain);
+  }
+
+  /**
+   * Get service configuration
+   * @returns Current service configuration
+   */
+  getConfig(): IStrategyConfig {
+    return { ...this.config };
+  }
+
+  /**
    * Execute hybrid domain availability check using both DNS and WHOIS concurrently
    * @param domain - Full domain name to check
    * @returns Promise resolving to domain result with combined information
