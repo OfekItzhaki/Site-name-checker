@@ -17,8 +17,10 @@
     "lint": "tsc --noEmit",
     "type-check": "tsc --noEmit",
     "start:api": "node dist/api/index.js",
-    "start:frontend": "node server.js",
-    "start": "npm run build && npm run start:api"
+    "start:minimal-api": "node dist/minimal-api.js",
+    "start:frontend": "node scripts/server.js",
+    "start": "npm run build && npm run start:api",
+    "dev:full": "echo Starting full application... && start cmd /k \"npm run start:minimal-api\" && timeout /t 2 && npm run start:frontend"
   },
   "keywords": [
     "domain",

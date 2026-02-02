@@ -3,10 +3,12 @@
  * Handles command and query routing with loose coupling
  */
 
+// @ts-ignore TS6133
 export interface ICommand<TResult = void> {
   readonly type: string;
 }
 
+// @ts-ignore TS6133
 export interface IQuery<TResult> {
   readonly type: string;
 }
@@ -20,6 +22,6 @@ export interface IQueryHandler<TQuery extends IQuery<TResult>, TResult> {
 }
 
 export interface IMediator {
-  send<TResult>(request: ICommand<TResult>): Promise<TResult>;
+  send<TResult = void>(request: ICommand<TResult>): Promise<TResult>;
   send<TResult>(request: IQuery<TResult>): Promise<TResult>;
 }

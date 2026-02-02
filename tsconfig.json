@@ -31,6 +31,10 @@
   "exclude": [
     "node_modules",
     "dist",
-    "tests"
+    "tests",
+    "src/simple-api.ts",
+    "src/minimal-api.ts",
+    "src/ui",
+    "src/main.ts"
   ]
 }

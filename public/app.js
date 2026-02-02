@@ -27,7 +27,15 @@ class DomainCheckerClient {
         this.domainForm = document.getElementById('domain-form');
         this.domainInput = document.getElementById('domain-input');
         this.checkButton = document.getElementById('check-button');
-        this.bulkCheckButton = document.getElementById('bulk-check-button');
+        // Mode toggle elements
+        this.singleModeBtn = document.getElementById('single-mode-btn');
+        this.bulkModeBtn = document.getElementById('bulk-mode-btn');
+        this.singleInputPanel = document.getElementById('single-input-panel');
+        this.bulkInputPanel = document.getElementById('bulk-input-panel');
+        // Bulk input elements
+        this.bulkDomainsInput = document.getElementById('bulk-domains');
+        this.processBulkBtn = document.getElementById('process-bulk');
+        this.clearBulkBtn = document.getElementById('clear-bulk');
         this.validationError = document.getElementById('validation-error');
         // Results elements
         this.resultsSection = document.getElementById('results-section');
@@ -80,9 +88,29 @@ class DomainCheckerClient {
         this.setupNewFeatureListeners();
     }
     setupNewFeatureListeners() {
+        // Mode toggle functionality
+        this.singleModeBtn?.addEventListener('click', () => {
+            this.switchToSingleMode();
+        });
+        this.bulkModeBtn?.addEventListener('click', () => {
+            this.switchToBulkMode();
+        });
         // Bulk check functionality
-        this.bulkCheckButton?.addEventListener('click', () => {
-            this.toggleBulkMode();
+        this.processBulkBtn?.addEventListener('click', () => {
+            this.handleBulkCheck();
+        });
+        this.clearBulkBtn?.addEventListener('click', () => {
+            this.clearBulkInput();
+        });
+        // Bulk input enhancements
+        this.bulkDomainsInput?.addEventListener('input', () => {
+            this.updateBulkCounter();
+        });
+        this.bulkDomainsInput?.addEventListener('paste', (e) => {
+            // Allow paste and then clean up the input
+            setTimeout(() => {
+                this.cleanBulkInput();
+            }, 10);
         });
         // Show/hide filters and analytics
         const showFiltersBtn = document.getElementById('show-filters');
@@ -98,12 +126,160 @@ class DomainCheckerClient {
             this.exportAllData();
         });
     }
-    toggleBulkMode() {
-        const bulkArea = document.getElementById('bulk-input-area');
-        if (bulkArea) {
-            bulkArea.classList.toggle('hidden');
-            this.bulkCheckButton.textContent = bulkArea.classList.contains('hidden') ? 'Bulk Check' : 'Single Check';
+    switchToSingleMode() {
+        // Update button states
+        this.singleModeBtn.classList.add('active');
+        this.singleModeBtn.setAttribute('aria-selected', 'true');
+        this.bulkModeBtn.classList.remove('active');
+        this.bulkModeBtn.setAttribute('aria-selected', 'false');
+        // Show/hide panels
+        this.singleInputPanel.classList.remove('hidden');
+        this.singleInputPanel.classList.add('active');
+        this.bulkInputPanel.classList.add('hidden');
+        this.bulkInputPanel.classList.remove('active');
+        // Focus the single input
+        setTimeout(() => {
+            this.domainInput.focus();
+        }, 100);
+        // Clear any validation errors
+        this.hideValidationError();
+    }
+    switchToBulkMode() {
+        // Update button states
+        this.bulkModeBtn.classList.add('active');
+        this.bulkModeBtn.setAttribute('aria-selected', 'true');
+        this.singleModeBtn.classList.remove('active');
+        this.singleModeBtn.setAttribute('aria-selected', 'false');
+        // Show/hide panels
+        this.bulkInputPanel.classList.remove('hidden');
+        this.bulkInputPanel.classList.add('active');
+        this.singleInputPanel.classList.add('hidden');
+        this.singleInputPanel.classList.remove('active');
+        // Focus the bulk input
+        setTimeout(() => {
+            this.bulkDomainsInput.focus();
+        }, 100);
+        // Clear any validation errors
+        this.hideValidationError();
+    }
+    async handleBulkCheck() {
+        const domains = this.getBulkDomains();
+        if (domains.length === 0) {
+            this.showValidationError('Please enter at least one domain name.');
+            return;
         }
+        if (domains.length > 20) {
+            this.showValidationError('Maximum 20 domains allowed at once.');
+            return;
+        }
+        // Validate all domains first
+        const invalidDomains = domains.filter(domain => !this.validateDomainName(domain));
+        if (invalidDomains.length > 0) {
+            this.showValidationError(`Invalid domain format: ${invalidDomains.join(', ')}`);
+            return;
+        }
+        try {
+            this.showResults();
+            this.updateProgress(0, domains.length, 'Preparing bulk check...');
+            // Process domains in batches to avoid overwhelming the API
+            const batchSize = 5;
+            const results = [];
+            for (let i = 0; i < domains.length; i += batchSize) {
+                const batch = domains.slice(i, i + batchSize);
+                const batchPromises = batch.map(domain => this.checkSingleDomain(domain));
+                const batchResults = await Promise.allSettled(batchPromises);
+                results.push(...batchResults);
+                // Update progress
+                const completed = Math.min(i + batchSize, domains.length);
+                this.updateProgress(completed, domains.length, `Checked ${completed} of ${domains.length} domains...`);
+            }
+            // Process results
+            this.currentResults = [];
+            results.forEach((result, index) => {
+                if (result.status === 'fulfilled' && result.value) {
+                    // Add all results from the API response
+                    this.currentResults.push(...result.value.results);
+                }
+                else {
+                    // Handle failed domain - create error results for all TLDs
+                    const domain = domains[index];
+                    const errorTlds = ['.com', '.net', '.org', '.io', '.ai', '.co'];
+                    errorTlds.forEach(tld => {
+                        this.currentResults.push({
+                            domain: domain + tld,
+                            status: 'error',
+                            checkMethod: 'API',
+                            executionTime: 0,
+                            error: 'Check failed'
+                        });
+                    });
+                }
+            });
+            this.displayResults(this.currentResults);
+            this.updateProgress(domains.length, domains.length, `Completed checking ${domains.length} domains`);
+        }
+        catch (error) {
+            console.error('Bulk check error:', error);
+            this.showError('Failed to check domains. Please try again.');
+        }
+    }
+    getBulkDomains() {
+        const text = this.bulkDomainsInput.value.trim();
+        if (!text)
+            return [];
+        return text
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .map(line => line.replace(/^https?:\/\//, '').replace(/\/.*$/, '')) // Clean URLs
+            .filter((domain, index, arr) => arr.indexOf(domain) === index); // Remove duplicates
+    }
+    clearBulkInput() {
+        this.bulkDomainsInput.value = '';
+        this.updateBulkCounter();
+        this.hideValidationError();
+    }
+    cleanBulkInput() {
+        const domains = this.getBulkDomains();
+        this.bulkDomainsInput.value = domains.join('\n');
+        this.updateBulkCounter();
+    }
+    updateBulkCounter() {
+        const domains = this.getBulkDomains();
+        const helpElement = document.getElementById('bulk-help');
+        if (helpElement) {
+            const count = domains.length;
+            const maxCount = 20;
+            const remaining = maxCount - count;
+            if (count === 0) {
+                helpElement.textContent = 'Enter each domain on a new line. You can check up to 20 domains at once.';
+                helpElement.className = 'input-help';
+            }
+            else if (count <= maxCount) {
+                helpElement.textContent = `${count} domain${count !== 1 ? 's' : ''} ready to check. ${remaining} remaining.`;
+                helpElement.className = 'input-help';
+            }
+            else {
+                helpElement.textContent = `Too many domains! Please remove ${count - maxCount} domain${count - maxCount !== 1 ? 's' : ''}.`;
+                helpElement.className = 'input-help error';
+            }
+        }
+    }
+    async checkSingleDomain(baseDomain) {
+        const response = await fetch(`${this.apiBaseUrl}/check-domain`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                baseDomain: baseDomain,
+                tlds: ['.com', '.net', '.org', '.io', '.ai', '.co']
+            }),
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
     }
     toggleFilters() {
         const filtersPanel = document.getElementById('advanced-filters');
@@ -288,6 +464,11 @@ class DomainCheckerClient {
         const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
         return domainRegex.test(domain) && domain.length <= 63;
     }
+    validateDomainName(domain) {
+        // Remove any protocol and path from the domain
+        const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+        return this.isValidDomainFormat(cleanDomain);
+    }
     showProgress() {
         this.resultsSection.classList.remove('hidden');
         this.progressIndicator.classList.remove('hidden');
@@ -295,35 +476,82 @@ class DomainCheckerClient {
         this.errorMessage.classList.add('hidden');
         this.retryButton.classList.add('hidden');
     }
-    updateProgress(percentage, text) {
-        this.progressFill.style.width = percentage + '%';
-        this.progressText.textContent = text;
+    showResults() {
+        this.resultsSection.classList.remove('hidden');
+        this.progressIndicator.classList.add('hidden');
+        this.errorMessage.classList.add('hidden');
+    }
+    updateProgress(current, totalOrText, text) {
+        if (typeof totalOrText === 'string') {
+            // Single mode: updateProgress(percentage, text)
+            this.progressFill.style.width = current + '%';
+            this.progressText.textContent = totalOrText;
+        }
+        else if (typeof totalOrText === 'number' && text) {
+            // Bulk mode: updateProgress(current, total, text)
+            const percentage = Math.round((current / totalOrText) * 100);
+            this.progressFill.style.width = percentage + '%';
+            this.progressText.textContent = text;
+        }
     }
     hideProgress() {
         this.progressIndicator.classList.add('hidden');
     }
     displayResults(response) {
-        this.currentResults = response.results || [];
-        this.resultsGrid.innerHTML = '';
-        if (this.currentResults.length === 0) {
-            this.showError('No results received from the API');
-            return;
+        // Handle both QueryResponse and DomainResult[] inputs
+        if (Array.isArray(response)) {
+            // Bulk mode: response is DomainResult[]
+            this.currentResults = response;
+            this.resultsGrid.innerHTML = '';
+            if (this.currentResults.length === 0) {
+                this.showError('No results to display');
+                return;
+            }
+            // Create a simple summary for bulk results
+            const available = this.currentResults.filter(r => r.status === 'available').length;
+            const taken = this.currentResults.filter(r => r.status === 'taken').length;
+            const errors = this.currentResults.filter(r => r.status === 'error').length;
+            const summary = document.createElement('div');
+            summary.className = 'results-summary';
+            summary.innerHTML = `
+        <h3>Bulk Check Results</h3>
+        <div class="summary-stats">
+          <span class="stat available">✅ ${available} Available</span>
+          <span class="stat taken">❌ ${taken} Taken</span>
+          ${errors > 0 ? `<span class="stat error">⚠️ ${errors} Errors</span>` : ''}
+        </div>
+      `;
+            this.resultsGrid.appendChild(summary);
+            // Display individual results
+            this.currentResults.forEach(result => {
+                const resultCard = this.createResultCard(result);
+                this.resultsGrid.appendChild(resultCard);
+            });
         }
-        // Display summary
-        const summary = this.createSummary(response);
-        this.resultsGrid.appendChild(summary);
-        // Display individual results
-        this.currentResults.forEach(result => {
-            const resultCard = this.createResultCard(result);
-            this.resultsGrid.appendChild(resultCard);
-        });
+        else {
+            // Single mode: response is QueryResponse
+            this.currentResults = response.results || [];
+            this.resultsGrid.innerHTML = '';
+            if (this.currentResults.length === 0) {
+                this.showError('No results received from the API');
+                return;
+            }
+            // Display summary
+            const summary = this.createSummary(response);
+            this.resultsGrid.appendChild(summary);
+            // Display individual results
+            this.currentResults.forEach(result => {
+                const resultCard = this.createResultCard(result);
+                this.resultsGrid.appendChild(resultCard);
+            });
+            // Add export functionality
+            this.addExportButton(response);
+        }
         // Show retry button if there are errors
         const hasErrors = this.currentResults.some(r => r.status === 'error');
         if (hasErrors) {
             this.retryButton.classList.remove('hidden');
         }
-        // Add export functionality
-        this.addExportButton(response);
     }
     createSummary(response) {
         const summary = document.createElement('div');

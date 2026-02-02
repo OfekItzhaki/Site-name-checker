@@ -1,7 +1,7 @@
 import type { AvailabilityStatus } from './AvailabilityStatus';
 
 /**
- * Domain pricing information
+ * Domain pricing information (full service data)
  */
 export interface IDomainPricing {
   /** Domain name */
@@ -12,6 +12,24 @@ export interface IDomainPricing {
   firstYearPrice: number;
   /** Annual renewal price in USD */
   renewalPrice: number;
+  /** Recommended registrar */
+  registrar: string;
+  /** Registrar website URL */
+  registrarUrl: string;
+  /** Whether this is a premium domain */
+  isPremium: boolean;
+  /** Additional notes about pricing */
+  notes?: string;
+}
+
+/**
+ * Simplified pricing information for frontend display
+ */
+export interface IDisplayPricing {
+  /** First year price as formatted string */
+  firstYearPrice: string;
+  /** Renewal price as formatted string */
+  renewalPrice: string;
   /** Recommended registrar */
   registrar: string;
   /** Registrar website URL */
@@ -54,6 +72,6 @@ export interface IDomainResult {
     nameServers?: string[];
     status?: string[];
   };
-  /** Pricing information (only for available domains) */
-  pricing?: IDomainPricing;
+  /** Pricing information (only for available domains) - simplified for display */
+  pricing?: IDisplayPricing;
 }

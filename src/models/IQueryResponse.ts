@@ -1,5 +1,4 @@
 import type { IDomainResult } from './IDomainResult';
-import type { IQueryError } from './IQueryError';
 
 /**
  * Interface representing the response from a domain availability query

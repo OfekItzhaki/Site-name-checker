@@ -1,7 +1,9 @@
 import type { ICommandHandler } from '../../patterns/mediator';
 import type { CheckDomainAvailabilityCommand } from '../commands/CheckDomainAvailabilityCommand';
-import type { IQueryResponse } from '../../models';
+import type { IQueryResponse, IDisplayPricing } from '../../models';
 import { DomainQueryEngine } from '../../services/DomainQueryEngine';
+import { HybridQueryService } from '../../services/HybridQueryService';
+import { DomainPricingService } from '../../services/DomainPricingService';
 import { InputValidator } from '../../validators/InputValidator';
 
 /**
@@ -13,10 +15,16 @@ export class CheckDomainAvailabilityHandler
   
   private queryEngine: DomainQueryEngine;
   private validator: InputValidator;
+  private pricingService: DomainPricingService;
 
   constructor() {
     this.queryEngine = new DomainQueryEngine();
     this.validator = new InputValidator();
+    this.pricingService = new DomainPricingService();
+    
+    // Initialize query strategy
+    const hybridStrategy = new HybridQueryService();
+    this.queryEngine.setQueryStrategy(hybridStrategy);
   }
 
   /**
@@ -40,10 +48,32 @@ export class CheckDomainAvailabilityHandler
       // Execute domain checking logic
       const results = await this.queryEngine.checkMultipleTLDs(baseDomain, tlds);
       
+      // Add pricing information for available domains
+      const enrichedResults = results.map(result => {
+        if (result.status === 'available') {
+          const pricing = this.pricingService.getDomainPricing(result.domain);
+          if (pricing) {
+            const displayPricing: IDisplayPricing = {
+              firstYearPrice: `$${pricing.firstYearPrice}`,
+              renewalPrice: `$${pricing.renewalPrice}`,
+              registrar: pricing.registrar,
+              registrarUrl: pricing.registrarUrl,
+              isPremium: pricing.isPremium,
+              ...(pricing.notes && { notes: pricing.notes })
+            };
+            return {
+              ...result,
+              pricing: displayPricing
+            };
+          }
+        }
+        return result;
+      });
+      
       return {
         success: true,
         queryId: this.generateQueryId(),
-        results,
+        results: enrichedResults,
         errors: [],
         timestamp: new Date().toISOString()
       };

@@ -110,7 +110,194 @@ body {
     cursor: not-allowed;
 }
 
-/* Validation and error messages */
+/* Mode Toggle Styles */
+.mode-toggle-container {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.mode-toggle {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+}
+
+.mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.mode-btn:hover {
+    color: #495057;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.mode-btn.active {
+    background: white;
+    color: #2563eb;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mode-icon {
+    font-size: 1.1rem;
+}
+
+/* Input Panel Styles */
+.input-panel {
+    transition: all 0.3s ease;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.input-panel.hidden {
+    display: none;
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.input-panel.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.input-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.input-help {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #2563eb;
+}
+
+/* Enhanced Button Styles */
+.btn-icon {
+    font-size: 1rem;
+    margin-right: 0.25rem;
+}
+
+.process-bulk-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.process-bulk-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.clear-bulk-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.clear-bulk-btn:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.bulk-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    justify-content: flex-start;
+}
+
+/* Enhanced Bulk Input */
+.bulk-domains-input {
+    width: 100%;
+    min-height: 120px;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bulk-domains-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.bulk-domains-input::placeholder {
+    color: #adb5bd;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .mode-toggle {
+        width: 100%;
+        max-width: 400px;
+    }
+    
+    .mode-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .input-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .bulk-actions {
+        flex-direction: column;
+    }
+    
+    .process-bulk-btn,
+    .clear-bulk-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
 .validation-error {
     color: #e74c3c;
     font-size: 0.9rem;
@@ -423,7 +610,6 @@ body {
 
 .result-card.available .price-value.premium {
     color: #856404;
-}
 }
 
 .loading {

@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3002;
+const PORT = 3004;
 
 // MIME types for different file extensions
 const mimeTypes = {
@@ -27,9 +27,11 @@ const server = http.createServer((req, res) => {
     
     // Handle special cases
     if (urlWithoutQuery === '/favicon.ico') {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Not Found');
-      return;
+      filePath = '/public/favicon.ico';
+    } else if (urlWithoutQuery === '/favicon.svg') {
+      filePath = '/public/favicon.svg';
+    } else if (urlWithoutQuery.startsWith('/favicon-')) {
+      filePath = '/public' + urlWithoutQuery;
     }
     
     // Handle Chrome DevTools requests
@@ -52,7 +54,7 @@ const server = http.createServer((req, res) => {
       filePath = '/public' + urlWithoutQuery; // Add public prefix for other files
     }
     
-    const fullPath = path.join(__dirname, filePath);
+    const fullPath = path.join(__dirname, '..', filePath);
     console.log(`Serving file: ${fullPath}`);
     
     const ext = path.extname(fullPath).toLowerCase();

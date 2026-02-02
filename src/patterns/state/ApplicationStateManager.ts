@@ -366,7 +366,8 @@ export class ApplicationStateManager implements IApplicationStateManager {
     if (this.stateHistory.length === 0) {
       return null;
     }
-    return this.stateHistory[this.stateHistory.length - 1].timestamp;
+    const lastEntry = this.stateHistory[this.stateHistory.length - 1];
+    return lastEntry ? lastEntry.timestamp : null;
   }
 
   /**
