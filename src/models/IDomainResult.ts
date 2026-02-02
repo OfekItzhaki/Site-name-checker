@@ -24,4 +24,12 @@ export interface IDomainResult {
   executionTime?: number;
   /** DNS records found during lookup (for DNS method) */
   dnsRecords?: string[];
+  /** WHOIS data found during lookup (for WHOIS method) */
+  whoisData?: {
+    registrar?: string;
+    expirationDate?: Date;
+    registrationDate?: Date;
+    nameServers?: string[];
+    status?: string[];
+  };
 }

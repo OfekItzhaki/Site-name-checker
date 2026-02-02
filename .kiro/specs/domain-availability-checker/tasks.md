@@ -85,34 +85,34 @@ This implementation plan breaks down the domain availability checker into discre
     - _Requirements: 4.1, 4.2_
 
 - [ ] 5. Implement WHOIS query service
-  - [~] 5.1 Create WHOIS Query Service using whois library
+  - [x] 5.1 Create WHOIS Query Service using whois library
     - Install and configure whois npm package
     - Implement WHOIS query execution with error handling
     - Add response parsing to determine availability
     - Include rate limiting and retry logic
     - _Requirements: 4.1, 4.2, 5.4_
   
-  - [~] 5.2 Write unit tests for WHOIS service
+  - [x] 5.2 Write unit tests for WHOIS service
     - Test WHOIS query parsing for different response formats
     - Test rate limiting and retry mechanisms
     - _Requirements: 4.1, 4.2, 5.4_
 
 - [ ] 6. Implement concurrent query processing
-  - [~] 6.1 Add concurrent processing to Domain Query Engine
+  - [x] 6.1 Add concurrent processing to Domain Query Engine
     - Implement Promise.all() for parallel TLD checking
     - Add individual query timeout handling
     - Create error isolation logic (failed queries don't affect others)
     - _Requirements: 2.3, 4.2_
   
-  - [~] 6.2 Write property test for concurrent execution
+  - [x] 6.2 Write property test for concurrent execution
     - **Property 3: Concurrent Query Execution**
     - **Validates: Requirements 2.3**
   
-  - [~] 6.3 Write property test for error isolation
+  - [x] 6.3 Write property test for error isolation
     - **Property 6: Error Isolation and Handling**
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
 
-- [~] 7. Checkpoint - Ensure core engine tests pass
+- [x] 7. Checkpoint - Ensure core engine tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. Create domain controller orchestration

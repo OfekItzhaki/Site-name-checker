@@ -1,182 +1,386 @@
-import type { IDomainResult } from '../models/IDomainResult';
-import type { IQueryService, IServiceConfig } from '../patterns/factory/IServiceFactory';
+import type { IDomainResult } from '../models';
 import { AvailabilityStatus } from '../models/AvailabilityStatus';
-import { BaseQueryService } from './BaseQueryService';
+import type { IQueryStrategy, IStrategyConfig } from '../patterns/strategy/IQueryStrategy';
 import { DNSLookupService } from './DNSLookupService';
 import { WHOISQueryService } from './WHOISQueryService';
 
 /**
- * Hybrid domain availability checking service
- * Combines DNS and WHOIS queries for optimal speed and accuracy
- * Strategy: DNS first for speed, WHOIS for confirmation when needed
+ * Hybrid Query Service - combines DNS and WHOIS strategies for optimal speed and accuracy
+ * Implements concurrent processing with error isolation
  */
-export class HybridQueryService extends BaseQueryService implements IQueryService {
+export class HybridQueryService implements IQueryStrategy {
+  private config: IStrategyConfig = {
+    timeout: 15000, // 15 second timeout for hybrid queries
+    retries: 2,
+    priority: 3, // Highest priority for hybrid approach
+    enabled: true
+  };
+
   private dnsService: DNSLookupService;
   private whoisService: WHOISQueryService;
+  private concurrentTimeout = 5000; // Timeout for individual concurrent operations
 
-  constructor(config?: Partial<IServiceConfig>) {
-    super(config);
+  constructor() {
+    this.dnsService = new DNSLookupService();
+    this.whoisService = new WHOISQueryService();
     
-    // Create DNS and WHOIS services with shared configuration
-    this.dnsService = new DNSLookupService(config);
-    this.whoisService = new WHOISQueryService(config);
+    // Configure services for hybrid use
+    this.dnsService.setConfig({ timeout: this.concurrentTimeout, retries: 1 });
+    this.whoisService.setConfig({ timeout: this.concurrentTimeout, retries: 1 });
   }
 
   /**
-   * Get service type identifier
-   */
-  getServiceType(): 'DNS' | 'WHOIS' | 'HYBRID' {
-    return 'HYBRID';
-  }
-
-  /**
-   * Set configuration for all underlying services
-   */
-  override setConfig(config: Partial<IServiceConfig>): void {
-    super.setConfig(config);
-    this.dnsService.setConfig(config);
-    this.whoisService.setConfig(config);
-  }
-
-  /**
-   * Check domain availability using hybrid approach
+   * Execute hybrid domain availability check using both DNS and WHOIS concurrently
    * @param domain - Full domain name to check
-   * @returns Promise resolving to domain result
+   * @returns Promise resolving to domain result with combined information
    */
-  async checkDomain(domain: string): Promise<IDomainResult> {
+  async execute(domain: string): Promise<IDomainResult> {
     const startTime = Date.now();
-    let retryCount = 0;
+    const baseDomain = this.extractBaseDomain(domain);
+    const tld = this.extractTLD(domain);
 
-    try {
-      const result = await this.executeWithRetry(async () => {
-        retryCount++;
-        return await this.executeWithTimeout(async () => {
-          return await this.performHybridQuery(domain);
-        });
-      });
-
+    // Validate domain format first
+    if (!this.isValidDomainFormat(domain)) {
       const executionTime = Date.now() - startTime;
-      return this.createDomainResult(
-        domain,
-        result.status,
-        'HYBRID',
-        executionTime,
-        result.error,
-        retryCount - 1
-      );
-    } catch (error) {
-      const executionTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      return this.createDomainResult(
-        domain,
-        AvailabilityStatus.ERROR,
-        'HYBRID',
-        executionTime,
-        `Hybrid query failed: ${errorMessage}`,
-        retryCount
-      );
-    }
-  }
-
-  /**
-   * Perform hybrid query using DNS first, then WHOIS for confirmation
-   */
-  private async performHybridQuery(domain: string): Promise<{ status: AvailabilityStatus; error?: string }> {
-    try {
-      // Step 1: Fast DNS check
-      const dnsResult = await this.dnsService.checkDomain(domain);
-      
-      // If DNS shows clear availability, we can trust it for speed
-      if (dnsResult.status === AvailabilityStatus.AVAILABLE) {
-        return { status: AvailabilityStatus.AVAILABLE };
-      }
-      
-      // If DNS shows domain is taken, confirm with WHOIS for accuracy
-      if (dnsResult.status === AvailabilityStatus.TAKEN) {
-        try {
-          const whoisResult = await this.whoisService.checkDomain(domain);
-          
-          // WHOIS is more authoritative, so use its result
-          if (whoisResult.status === AvailabilityStatus.AVAILABLE || 
-              whoisResult.status === AvailabilityStatus.TAKEN) {
-            return { status: whoisResult.status };
-          }
-          
-          // If WHOIS is inconclusive, fall back to DNS result
-          return { status: dnsResult.status };
-        } catch (whoisError) {
-          // If WHOIS fails, use DNS result with a note
-          return { 
-            status: dnsResult.status,
-            error: `WHOIS confirmation failed: ${whoisError instanceof Error ? whoisError.message : String(whoisError)}`
-          };
-        }
-      }
-      
-      // If DNS had an error, try WHOIS as fallback
-      if (dnsResult.status === AvailabilityStatus.ERROR) {
-        try {
-          const whoisResult = await this.whoisService.checkDomain(domain);
-          return { status: whoisResult.status };
-        } catch (whoisError) {
-          return {
-            status: AvailabilityStatus.ERROR,
-            error: `Both DNS and WHOIS queries failed. DNS: ${dnsResult.error}, WHOIS: ${whoisError instanceof Error ? whoisError.message : String(whoisError)}`
-          };
-        }
-      }
-      
-      // Default case - return DNS result
-      return { status: dnsResult.status };
-      
-    } catch (error) {
       return {
+        domain,
+        baseDomain,
+        tld,
         status: AvailabilityStatus.ERROR,
-        error: `Hybrid query failed: ${error instanceof Error ? error.message : String(error)}`
+        lastChecked: new Date(),
+        checkMethod: 'HYBRID' as const,
+        retryCount: 0,
+        executionTime,
+        error: 'Invalid domain format'
+      };
+    }
+
+    try {
+      // Execute DNS and WHOIS queries concurrently with error isolation
+      const results = await this.executeConcurrentQueries(domain);
+      const executionTime = Date.now() - startTime;
+
+      // Combine results using hybrid logic
+      const combinedResult = this.combineResults(domain, results, executionTime);
+      
+      return combinedResult;
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Hybrid query failed';
+
+      return {
+        domain,
+        baseDomain,
+        tld,
+        status: AvailabilityStatus.ERROR,
+        lastChecked: new Date(),
+        checkMethod: 'HYBRID' as const,
+        retryCount: 0,
+        executionTime,
+        error: errorMessage
       };
     }
   }
 
   /**
-   * Get the underlying DNS service
+   * Execute DNS and WHOIS queries concurrently with error isolation
+   * @param domain - Domain to query
+   * @returns Promise resolving to array of results (some may be errors)
    */
-  getDNSService(): DNSLookupService {
-    return this.dnsService;
-  }
+  private async executeConcurrentQueries(domain: string): Promise<Array<IDomainResult | Error>> {
+    // Create promises for concurrent execution
+    const dnsPromise = this.dnsService.execute(domain).catch(error => error);
+    const whoisPromise = this.whoisService.execute(domain).catch(error => error);
 
-  /**
-   * Get the underlying WHOIS service
-   */
-  getWHOISService(): WHOISQueryService {
-    return this.whoisService;
-  }
+    // Execute concurrently with timeout
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Concurrent queries timeout')), this.config.timeout);
+    });
 
-  /**
-   * Perform DNS-only check (for testing or fallback)
-   */
-  async performDNSOnly(domain: string): Promise<IDomainResult> {
-    return this.dnsService.checkDomain(domain);
-  }
+    try {
+      // Race between concurrent queries and timeout
+      const results = await Promise.race([
+        Promise.all([dnsPromise, whoisPromise]),
+        timeoutPromise
+      ]);
 
-  /**
-   * Perform WHOIS-only check (for testing or when DNS is unreliable)
-   */
-  async performWHOISOnly(domain: string): Promise<IDomainResult> {
-    return this.whoisService.checkDomain(domain);
-  }
-
-  /**
-   * Get query strategy explanation for debugging
-   */
-  getStrategyExplanation(domain: string): string {
-    const { tld } = this.parseDomain(domain);
-    const premiumTLDs = ['.ai', '.dev', '.io'];
-    
-    if (premiumTLDs.includes(tld.toLowerCase())) {
-      return 'Using DNS + WHOIS confirmation for premium TLD accuracy';
+      return results;
+    } catch (error) {
+      // If timeout occurs, return partial results if available
+      const partialResults = await Promise.allSettled([dnsPromise, whoisPromise]);
+      
+      return partialResults.map(result => 
+        result.status === 'fulfilled' ? result.value : new Error('Query failed')
+      );
     }
+  }
+
+  /**
+   * Combine DNS and WHOIS results using hybrid logic
+   * @param domain - Original domain
+   * @param results - Array of results from concurrent queries
+   * @param executionTime - Total execution time
+   * @returns Combined domain result
+   */
+  private combineResults(
+    domain: string, 
+    results: Array<IDomainResult | Error>, 
+    executionTime: number
+  ): IDomainResult {
+    const baseDomain = this.extractBaseDomain(domain);
+    const tld = this.extractTLD(domain);
     
-    return 'Using DNS first for speed, WHOIS confirmation if domain appears taken';
+    const [dnsResult, whoisResult] = results;
+    
+    // Extract valid results with proper type checking
+    const validDnsResult: IDomainResult | null = (dnsResult && !(dnsResult instanceof Error)) ? dnsResult : null;
+    const validWhoisResult: IDomainResult | null = (whoisResult && !(whoisResult instanceof Error)) ? whoisResult : null;
+
+    // If both failed, return error
+    if (!validDnsResult && !validWhoisResult) {
+      return {
+        domain,
+        baseDomain,
+        tld,
+        status: AvailabilityStatus.ERROR,
+        lastChecked: new Date(),
+        checkMethod: 'HYBRID' as const,
+        retryCount: 0,
+        executionTime,
+        error: 'Both DNS and WHOIS queries failed'
+      };
+    }
+
+    // Determine final status using hybrid logic
+    const finalStatus = this.determineHybridStatus(validDnsResult, validWhoisResult);
+    
+    // Combine data from both sources
+    const combinedResult: IDomainResult = {
+      domain,
+      baseDomain,
+      tld,
+      status: finalStatus,
+      lastChecked: new Date(),
+      checkMethod: 'HYBRID' as const,
+      retryCount: 0,
+      executionTime
+    };
+
+    // Add DNS data if available
+    if (validDnsResult?.dnsRecords) {
+      combinedResult.dnsRecords = validDnsResult.dnsRecords;
+    }
+
+    // Add WHOIS data if available
+    if (validWhoisResult?.whoisData) {
+      combinedResult.whoisData = validWhoisResult.whoisData;
+    }
+
+    // Add error information if one query failed
+    if (!validDnsResult && dnsResult instanceof Error) {
+      combinedResult.error = `DNS query failed: ${dnsResult.message}`;
+    } else if (!validWhoisResult && whoisResult instanceof Error) {
+      combinedResult.error = `WHOIS query failed: ${whoisResult.message}`;
+    }
+
+    return combinedResult;
+  }
+
+  /**
+   * Determine final availability status using hybrid logic
+   * @param dnsResult - DNS query result (may be null)
+   * @param whoisResult - WHOIS query result (may be null)
+   * @returns Final availability status
+   */
+  private determineHybridStatus(
+    dnsResult: IDomainResult | null, 
+    whoisResult: IDomainResult | null
+  ): AvailabilityStatus {
+    // If both results are available, use WHOIS as authoritative source
+    if (dnsResult && whoisResult) {
+      // WHOIS is more authoritative for availability
+      if (whoisResult.status === AvailabilityStatus.AVAILABLE) {
+        return AvailabilityStatus.AVAILABLE;
+      }
+      if (whoisResult.status === AvailabilityStatus.TAKEN) {
+        return AvailabilityStatus.TAKEN;
+      }
+      // If WHOIS is error, fall back to DNS
+      return dnsResult.status;
+    }
+
+    // If only WHOIS is available, use it
+    if (whoisResult && !dnsResult) {
+      return whoisResult.status;
+    }
+
+    // If only DNS is available, use it
+    if (dnsResult && !whoisResult) {
+      return dnsResult.status;
+    }
+
+    // This shouldn't happen as we check for both null earlier
+    return AvailabilityStatus.ERROR;
+  }
+
+  /**
+   * Determine if this strategy can handle the given domain
+   * @param domain - Domain name to evaluate
+   * @returns True if this strategy can handle the domain
+   */
+  canHandle(domain: string): boolean {
+    // Hybrid can handle any domain that either DNS or WHOIS can handle
+    return this.dnsService.canHandle(domain) || this.whoisService.canHandle(domain);
+  }
+
+  /**
+   * Get the priority of this strategy (higher numbers = higher priority)
+   * @returns Strategy priority value
+   */
+  getPriority(): number {
+    return this.config.priority;
+  }
+
+  /**
+   * Get the name/identifier of this strategy
+   * @returns Strategy name
+   */
+  getName(): string {
+    return 'HybridQueryService';
+  }
+
+  /**
+   * Get strategy-specific configuration
+   * @returns Strategy configuration
+   */
+  getConfig(): IStrategyConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Set strategy configuration
+   * @param config - New configuration to apply
+   */
+  setConfig(config: Partial<IStrategyConfig>): void {
+    this.config = { ...this.config, ...config };
+    
+    // Update underlying service configurations
+    if (config.timeout) {
+      const serviceTimeout = Math.floor(config.timeout / 2); // Split timeout between services
+      this.dnsService.setConfig({ timeout: serviceTimeout });
+      this.whoisService.setConfig({ timeout: serviceTimeout });
+      this.concurrentTimeout = serviceTimeout;
+    }
+  }
+
+  /**
+   * Set concurrent operation timeout
+   * @param timeout - Timeout in milliseconds for individual operations
+   */
+  setConcurrentTimeout(timeout: number): void {
+    this.concurrentTimeout = Math.max(1000, timeout);
+    this.dnsService.setConfig({ timeout: this.concurrentTimeout });
+    this.whoisService.setConfig({ timeout: this.concurrentTimeout });
+  }
+
+  /**
+   * Get current concurrent operation timeout
+   * @returns Current timeout in milliseconds
+   */
+  getConcurrentTimeout(): number {
+    return this.concurrentTimeout;
+  }
+
+  /**
+   * Get performance metrics for the last hybrid query
+   * @returns Performance metrics including individual service times
+   */
+  getPerformanceMetrics(): {
+    totalTime: number;
+    dnsTime: number;
+    whoisTime: number;
+    concurrentEfficiency: number;
+  } {
+    // This would be implemented with actual timing data in a real scenario
+    // For now, return placeholder metrics
+    return {
+      totalTime: 0,
+      dnsTime: 0,
+      whoisTime: 0,
+      concurrentEfficiency: 0
+    };
+  }
+
+  /**
+   * Execute batch domain queries with concurrent processing
+   * @param domains - Array of domains to check
+   * @returns Promise resolving to array of domain results
+   */
+  async executeBatch(domains: string[]): Promise<IDomainResult[]> {
+    if (domains.length === 0) {
+      return [];
+    }
+
+    // Process domains in batches to avoid overwhelming services
+    const batchSize = 5;
+    const results: IDomainResult[] = [];
+
+    for (let i = 0; i < domains.length; i += batchSize) {
+      const batch = domains.slice(i, i + batchSize);
+      
+      // Execute batch concurrently
+      const batchPromises = batch.map(domain => this.execute(domain));
+      const batchResults = await Promise.all(batchPromises);
+      
+      results.push(...batchResults);
+      
+      // Add small delay between batches to be respectful to services
+      if (i + batchSize < domains.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Extract base domain from full domain name
+   * @param domain - Full domain name
+   * @returns Base domain without TLD
+   */
+  private extractBaseDomain(domain: string): string {
+    const parts = domain.toLowerCase().split('.');
+    if (parts.length >= 2) {
+      return parts.slice(0, -1).join('.');
+    }
+    return domain.toLowerCase();
+  }
+
+  /**
+   * Extract TLD from full domain name
+   * @param domain - Full domain name
+   * @returns TLD including the dot
+   */
+  private extractTLD(domain: string): string {
+    const parts = domain.toLowerCase().split('.');
+    if (parts.length >= 2) {
+      return '.' + parts[parts.length - 1];
+    }
+    return '';
+  }
+
+  /**
+   * Validate domain format for hybrid lookup
+   * @param domain - Domain to validate
+   * @returns True if domain format is valid
+   */
+  private isValidDomainFormat(domain: string): boolean {
+    if (!domain || typeof domain !== 'string') {
+      return false;
+    }
+
+    // Basic domain format validation - more permissive for testing
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    return domainRegex.test(domain) && domain.length <= 253 && domain.includes('.');
   }
 }
