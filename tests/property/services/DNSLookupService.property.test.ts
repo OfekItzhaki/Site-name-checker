@@ -354,8 +354,8 @@ describe('DNSLookupService Property Tests', () => {
             
             // Property: getConfig should return valid config
             const config = service.getConfig();
-            expect(config).toHaveProperty('timeout');
-            expect(config).toHaveProperty('retries');
+            expect(config).toHaveProperty('timeoutMs');
+            expect(config).toHaveProperty('maxRetries');
             expect(config).toHaveProperty('priority');
             expect(config).toHaveProperty('enabled');
             expect(typeof config.timeoutMs).toBe('number');

@@ -10,7 +10,11 @@ import { BatchDomainCheckCommand, type IBatchDomainCheckResult } from '../patter
  * Implements Strategy pattern for different query approaches and Command pattern for execution
  */
 export class DomainQueryEngine {
-  private static readonly SUPPORTED_TLDS = ['.com', '.net', '.org', '.ai', '.dev', '.io', '.co'];
+  private static readonly SUPPORTED_TLDS = [
+    '.com', '.net', '.org', '.ai', '.dev', '.io', '.co',
+    '.app', '.tech', '.online', '.store', '.shop', '.site',
+    '.blog', '.news', '.info', '.biz', '.me', '.tv'
+  ];
   private queryStrategy: IQueryStrategy | null = null;
   private results: Map<string, IDomainResult> = new Map();
 

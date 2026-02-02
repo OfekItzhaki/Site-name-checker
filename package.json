@@ -4,8 +4,11 @@
   "description": "A client-side web application that provides real-time domain availability checking across multiple TLDs",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "tsc",
+    "build:frontend": "tsc public/app.ts --outDir public --target es2020 --lib es2020,dom --strict --skipLibCheck",
     "dev": "tsc --watch",
+    "dev:frontend": "tsc public/app.ts --outDir public --target es2020 --lib es2020,dom --strict --skipLibCheck --watch",
     "watch": "tsc --watch",
     "test": "jest",
     "test:unit": "jest --testPathPattern=unit",

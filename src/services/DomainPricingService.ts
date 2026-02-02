@@ -93,6 +93,104 @@ export class DomainPricingService {
       registrarUrl: 'https://www.namecheap.com',
       isPremium: false,
       notes: 'Short alternative to .com'
+    }],
+    
+    // Additional Popular TLDs
+    ['.app', {
+      firstYear: 18.99,
+      renewal: 22.99,
+      registrar: 'Google Domains',
+      registrarUrl: 'https://domains.google.com',
+      isPremium: false,
+      notes: 'Perfect for mobile apps and web applications'
+    }],
+    ['.tech', {
+      firstYear: 49.99,
+      renewal: 54.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: true,
+      notes: 'Ideal for technology companies'
+    }],
+    ['.online', {
+      firstYear: 2.99,
+      renewal: 39.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Great for online businesses and services'
+    }],
+    ['.store', {
+      firstYear: 2.99,
+      renewal: 59.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Perfect for e-commerce and retail'
+    }],
+    ['.shop', {
+      firstYear: 2.99,
+      renewal: 39.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Ideal for online shops and retail'
+    }],
+    ['.site', {
+      firstYear: 2.99,
+      renewal: 32.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Generic extension for any website'
+    }],
+    ['.blog', {
+      firstYear: 2.99,
+      renewal: 32.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Perfect for blogs and content creators'
+    }],
+    ['.news', {
+      firstYear: 2.99,
+      renewal: 32.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Great for news sites and media'
+    }],
+    ['.info', {
+      firstYear: 2.99,
+      renewal: 19.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Good for informational websites'
+    }],
+    ['.biz', {
+      firstYear: 2.99,
+      renewal: 19.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Alternative for business websites'
+    }],
+    ['.me', {
+      firstYear: 2.99,
+      renewal: 24.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Great for personal websites and portfolios'
+    }],
+    ['.tv', {
+      firstYear: 32.99,
+      renewal: 39.99,
+      registrar: 'Namecheap',
+      registrarUrl: 'https://www.namecheap.com',
+      isPremium: false,
+      notes: 'Perfect for video content and streaming'
     }]
   ]);
 
